@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using ConsoleApp2;
 
-const int digitsCount = 40;
+const int digitsCount = 45;
 // BigInteger n = BigInteger.Parse("56772286057224175134407894536228864081"); // BigIntegerHelpers.GenerateSemiPrime(digitsCount);
 BigInteger n = BigIntegerHelpers.GenerateSemiPrime(digitsCount);
 Console.WriteLine($"{n} = ");
