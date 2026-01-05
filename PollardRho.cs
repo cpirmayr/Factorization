@@ -4,7 +4,7 @@ namespace ConsoleApp2;
 
 public static class PollardRho
 {
-  public static void Factorize(BigInteger n)
+  public static BigInteger Factorize(BigInteger n)
   {
     int function1Limit = (int) Math.Pow(10, Math.Round(GetDecimalPlaces(n) / 5.0));
     int function2Limit = 2 * function1Limit;
@@ -35,7 +35,7 @@ public static class PollardRho
         break;
       }
     } while (true);
-    Console.WriteLine($"{count} {n} {gcd} {n / gcd}");
+    return gcd;
   }
 
   private static int GetDecimalPlaces(BigInteger value)

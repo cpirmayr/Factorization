@@ -1,29 +1,22 @@
 ﻿using System.Numerics;
 using ConsoleApp2;
 
-const int digitsCount = 45;
-// BigInteger n = BigInteger.Parse("56772286057224175134407894536228864081"); // BigIntegerHelpers.GenerateSemiPrime(digitsCount);
-BigInteger n = BigIntegerHelpers.GenerateSemiPrime(digitsCount);
-Console.WriteLine($"{n} = ");
-/*
-Console.WriteLine($"{n}");
-PollardRho.Factorize(n);
-*/
-
-BigInteger result = ContinuedFractionFactorizer2.Factorize(n);
-Console.WriteLine($"{result} x {n / result}");
-/*
-BigInteger result = MpqsSolver.Factor(n);
-Console.WriteLine($"{result} x {n / result}");
-*/
-/*
-foreach ((BigInteger Numerator, BigInteger Denominator) convergent in BigIntegerHelpers.SqrtConvergents(n, 1000000))
+const int digitsCount = 35;
+int factorizationMethod = 1;
+if (args.Length == 1 && int.TryParse(args[0], out int method))
 {
-  // Console.WriteLine($"{convergent.Numerator} / {convergent.Denominator}");
-  BigInteger k = convergent.Numerator * convergent.Numerator - n * convergent.Denominator * convergent.Denominator;
-  // if (BigIntegerHelpers.IsSquare(k))
-  {
-    Console.WriteLine($"{k} {BigIntegerHelpers.IsSquare(k)}");
-  }
+  factorizationMethod = method;
 }
-*/
+BigInteger n = BigIntegerHelpers.GenerateSemiPrime(digitsCount);
+Console.WriteLine($"{n} =");
+BigInteger result = 0;
+switch (factorizationMethod)
+{
+  case 0:
+    result = PollardRho.Factorize(n);
+    break;
+  case 1:
+    result = ContinuedFractionFactorizer2.Factorize(n);
+    break;
+}
+Console.WriteLine($"{result} x {n / result}");
