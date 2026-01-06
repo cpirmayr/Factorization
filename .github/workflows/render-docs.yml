@@ -31,9 +31,10 @@ jobs:
           docfx docs/docfx.json
 
       - name: Daten fuer Deployment bereitstellen
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/_site
+          path: docs
+
 
   deploy:
     needs: build
