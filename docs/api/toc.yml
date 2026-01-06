@@ -1,2 +1,4 @@
-﻿- name: Übersicht
+﻿- name: API Übersicht
   href: index.md
+- name: Factorization Namespace
+  href: Factorization.yml
