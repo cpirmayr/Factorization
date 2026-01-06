@@ -3,32 +3,21 @@
     {
       "src": [
         {
-          "files": ["**/*.csproj"],
-          "exclude": ["**/bin/**", "**/obj/**"]
+          "files": [ "../Factorization.csproj" ],
+          "cwd": ".."
         }
       ],
-      "dest": "api",
-      "disableDefaultFilter": false
+      "dest": "api"
     }
   ],
   "build": {
     "content": [
-      {
-        "files": [
-          "api/**.yml",
-          "api/index.md",
-          "articles/**/*.md",
-          "toc.yml",
-          "*.md"
-        ]
-      }
+      { "files": [ "**/*.md", "**/*.yml" ] }
     ],
     "resource": [
-      {
-        "files": ["images/**"]
-      }
+      { "files": [ "**/*.png" ] }
     ],
-    "dest": "_site",
-    "template": ["default"]
+    "output": "_site",
+    "template": [ "default" ]
   }
 }

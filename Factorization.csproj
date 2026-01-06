@@ -5,7 +5,9 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-  </PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  <NoWarn>$(NoWarn);1591</NoWarn>
+</PropertyGroup>
 
   <ItemGroup>
     <None Include=".github\workflows\render-docs.yml" />
