@@ -17,7 +17,7 @@
     "resource": [
       { "files": [ "**/*.png" ] }
     ],
-    "output": "_site",
+    "output": "../docs",
     "template": [ "default" ]
   }
 }
