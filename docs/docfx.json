@@ -3,8 +3,8 @@
     {
       "src": [
         {
-          "cwd": "..",
-          "files": [ "Factorization.csproj" ]
+          "cwd": ".",
+          "files": [ "../Factorization.csproj" ]
         }
       ],
       "dest": "api"
