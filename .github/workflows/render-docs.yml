@@ -1,15 +1,20 @@
 name: DocFX-Dokumentation
+
 on:
   push:
-    branches: [ main ]  # Läuft immer, wenn du etwas in den 'main' Branch hochlädst
+    branches: [ main ]
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Code auschecken
@@ -18,17 +23,25 @@ jobs:
       - name: .NET installieren
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.x' # Oder deine aktuelle Version
+          dotnet-version: '8.x'
 
-      - name: DocFX installieren und Doku bauen
+      - name: DocFX bauen
         run: |
           dotnet tool install -g docfx
           docfx docs/docfx.json
 
-      - name: Webseite zu GitHub Pages hochladen
+      - name: Daten fuer Deployment bereitstellen
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs/_site
 
-      - name: Veröffentlichen
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Veroeffentlichen
+        id: deployment
         uses: actions/deploy-pages@v4
