@@ -3,7 +3,7 @@
     {
       "src": [
         {
-          "files": ["../**/*.csproj"],
+          "files": ["../*.csproj"],
           "exclude": ["**/obj/**", "**/bin/**"]
         }
       ],
@@ -16,13 +16,14 @@
         "files": ["api/**.yml", "api/*.md"]
       },
       {
-        "files": ["*.md"]
+        "files": ["index.md"]
+      },
+      {
+        "files": ["../README.md"],
+        "src": ".."
       }
     ],
     "dest": "_site",
-    "template": ["default", "modern"],
-    "postProcessors": [],
-    "markdownEngineName": "markdig",
-    "noLangKeyword": false
+    "template": ["default", "modern"]
   }
 }
