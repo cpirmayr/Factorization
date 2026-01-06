@@ -7,4 +7,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Include=".github\workflows\render-docs.yml" />
+  </ItemGroup>
+
 </Project>

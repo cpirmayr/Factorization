@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
-using ConsoleApp2;
+using Factorization;
 
-const int digitsCount = 35;
+const int digitsCount = 30;
 int factorizationMethod = 1;
 if (args.Length == 1 && int.TryParse(args[0], out int method))
 {
@@ -16,7 +16,8 @@ switch (factorizationMethod)
     result = PollardRho.Factorize(n);
     break;
   case 1:
-    result = ContinuedFractionFactorizer2.Factorize(n);
+    result = CFRAC.Factorize(n);
     break;
 }
 Console.WriteLine($"{result} x {n / result}");
+

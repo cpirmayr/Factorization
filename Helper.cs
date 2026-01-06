@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using System.Security.Cryptography;
 
-namespace ConsoleApp2;
+namespace Factorization;
 
 public static class BigIntegerHelpers
 {
@@ -167,6 +167,11 @@ public static class BigIntegerHelpers
       qMinus2 = qMinus1;
       qMinus1 = q;
     }
+  }
+
+  public static void Test<T>(this IEnumerable<T> enumerable, int index)
+  {
+    Console.WriteLine(enumerable.ElementAtOrDefault(index));
   }
 
   private static BigInteger GeneratePrimeInRange(BigInteger min, BigInteger max, Random rng)

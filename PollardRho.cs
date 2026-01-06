@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 
-namespace ConsoleApp2;
+namespace Factorization;
 
 public static class PollardRho
 {
