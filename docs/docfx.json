@@ -5,7 +5,7 @@
         {
           "cwd": ".",
           "files": [ "Factorization.csproj" ],
-		  "src": "../" // <---- base directory
+          "src": "../" // <---- base directory
         }
       ],
       "dest": "api"
@@ -16,7 +16,9 @@
       { "files": [ "**/*.md", "**/*.yml" ] }
     ],
     "resource": [
-      { "files": [ "**/*.png" ] }
+      {
+        "files": [ "**/*.png", "mathjax-config.js" ]
+      }
     ],
     "output": "../docs",
     "template": [ "default" ]
