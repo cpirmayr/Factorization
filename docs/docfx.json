@@ -17,10 +17,13 @@
     ],
     "resource": [
       {
-        "files": [ "**/*.png", "mathjax-config.js" ]
+        "files": [ "**/*.png" ]
       }
     ],
     "output": "../docs",
-    "template": [ "default" ]
+    "template": [
+      "default",
+      "templates/custom"
+    ]
   }
 }
