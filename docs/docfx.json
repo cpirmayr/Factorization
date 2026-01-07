@@ -5,7 +5,7 @@
         {
           "cwd": ".",
           "files": [ "Factorization.csproj" ],
-          "src": "../" // <---- base directory
+          "src": "../"
         }
       ],
       "dest": "api"
