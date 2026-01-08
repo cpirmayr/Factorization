@@ -5,20 +5,19 @@ using System.Numerics;
 namespace Factorization;
 
 /// <summary>
-///   IMPLEMENTIERUNG DER KETTENBRUCHMETHODE (CFRAC)
-///   MATHEMATISCHES PRINZIP:
+///   Implementierung der Kettenbruchmethode (Continued Fraction Factorization Method, CFRAC).
+///   Mathematisches Prinzip:
 ///   Das Ziel ist das Finden einer Kongruenz der Form $x^2 \equiv y^2 \pmod{n}$.
 ///   Wenn diese Bedingung erfüllt ist, lässt sich ein Teiler von n durch den
 ///   größten gemeinsamen Teiler von $(x - y)$ und $n$ berechnen.
-///   DIE ROLLE DER KETTENBRÜCHE:
-///   Die Kettenbruchentwicklung von $\sqrt{n}$ liefert Näherungsbrüche $A/B$.
-///   Für diese Brüche gilt die Identität: $A_i^2 - n \cdot B_i^2 = Q_i$.
-///   Daraus folgt: $A_i^2 \equiv Q_i \pmod{n}$.
-///   Da der Betrag von $Q_i$ kleiner als $(2 \cdot \sqrt{n})$ ist, ist die
-///   Wahrscheinlichkeit hoch, dass $Q$ glatt über einer Faktorbasis ist.
 /// </summary>
 public class CFRAC
 {
+  /// <summary>
+  ///   Initialisiert eine neue Instanz der <see cref="CFRAC" />-Klasse.
+  /// </summary>
+  /// <param name="targetNumber">Die zusammengesetzte Zahl, die faktorisiert werden soll.</param>
+  /// <param name="baseSize">Die gewünschte Größe der Primzahl-Faktorbasis.</param>
   public CFRAC(BigInteger targetNumber, int baseSize = 400)
   {
     targetCompositeNumber = targetNumber;
@@ -26,22 +25,48 @@ public class CFRAC
     smoothRelationsBag = new ConcurrentBag<SmoothRelation>();
   }
 
-  public List<int> factorBasePrimes = []; // Primzahlen p, für die (n/p) = 1 gilt
-  private readonly int factorBaseSize; // Anzahl der Primzahlen in der Basis
+  /// <summary>
+  ///   Die Liste der Primzahlen p, für die das Legendre-Symbol (n/p) = 1 gilt.
+  ///   Diese bilden die Grundlage für die Prüfung auf Glattheit.
+  /// </summary>
+  public List<int> factorBasePrimes = [];
 
-  private readonly ConcurrentBag<SmoothRelation> smoothRelationsBag; // Speicher für gefundene Relationen
+  /// <summary>
+  ///   Die Anzahl der Primzahlen, die in der Faktorbasis enthalten sein sollen.
+  /// </summary>
+  private readonly int factorBaseSize;
 
-  // --- Klassenfelder (Zustand des Algorithmus) ---
-  private readonly BigInteger targetCompositeNumber; // Die zu faktorisierende Zahl n
-  private List<SmoothRelation> sortedSmoothRelations = []; // Sortierte Liste für Matrixaufbau
+  /// <summary>
+  ///   Ein thread-sicherer Speicher für alle gefundenen glatten Relationen während der Siebphase.
+  /// </summary>
+  private readonly ConcurrentBag<SmoothRelation> smoothRelationsBag;
 
-  /// <summary> Statische Einstiegsmethode zur Faktorisierung. </summary>
+  /// <summary>
+  ///   Die zu faktorisierende Zahl n.
+  /// </summary>
+  private readonly BigInteger targetCompositeNumber;
+
+  /// <summary>
+  ///   Eine sortierte Liste der gefundenen Relationen für den Aufbau der Matrix in der linearen Algebra-Phase.
+  /// </summary>
+  private List<SmoothRelation> sortedSmoothRelations = [];
+
+  /// <summary>
+  ///   Statische Einstiegsmethode zur Faktorisierung einer Zahl.
+  ///   Berechnet automatisch eine sinnvolle Basisgröße basierend auf der Größe von n.
+  /// </summary>
+  /// <param name="n">Die zu faktorisierende Zahl.</param>
+  /// <returns>Einen nicht-trivialen Faktor von n oder -1, falls kein Faktor gefunden wurde.</returns>
   public static BigInteger Factorize(BigInteger n)
   {
     CFRAC factorizer = new(n, CalculateOptimalFactorBaseSize(n) / 10);
     return factorizer.RunFactorization();
   }
 
+  /// <summary>
+  ///   Führt den vollständigen CFRAC-Algorithmus aus: Vorprüfung, Basisgenerierung, Relationssuche und Matrixlösung.
+  /// </summary>
+  /// <returns>Einen gefundenen Faktor von n.</returns>
   public BigInteger RunFactorization()
   {
     if (targetCompositeNumber < 2)
@@ -68,6 +93,12 @@ public class CFRAC
     return FindDependencyAndGcdParallel();
   }
 
+  /// <summary>
+  ///   Berechnet die ganzzahlige Quadratwurzel einer BigInteger-Zahl mittels Newton-Verfahren.
+  /// </summary>
+  /// <param name="n">Die Zahl, deren Wurzel berechnet werden soll.</param>
+  /// <returns>Die abgerundete ganzzahlige Quadratwurzel.</returns>
+  /// <exception cref="ArgumentException">Wird geworfen, wenn n negativ ist.</exception>
   private static BigInteger CalculateIntegerSquareRoot(BigInteger n)
   {
     if (n < 0)
@@ -90,18 +121,34 @@ public class CFRAC
     }
   }
 
+  /// <summary>
+  ///   Schätzt die optimale Größe der Faktorbasis basierend auf der Komplexitätsfunktion L[n].
+  /// </summary>
+  /// <param name="n">Die zu faktorisierende Zahl.</param>
+  /// <returns>Die empfohlene Anzahl an Primzahlen für die Basis.</returns>
   private static int CalculateOptimalFactorBaseSize(BigInteger n)
   {
     double l = BigInteger.Log(n);
     return (int) Math.Max(Math.Exp(0.4 * Math.Sqrt(l * Math.Log(l))), 200);
   }
 
+  /// <summary>
+  ///   Prüft, ob eine Zahl eine Quadratzahl ist.
+  /// </summary>
+  /// <param name="n">Die zu prüfende Zahl.</param>
+  /// <param name="root">Die berechnete Wurzel, falls n eine Quadratzahl ist.</param>
+  /// <returns>True, wenn n eine perfekte Quadratzahl ist, andernfalls False.</returns>
   private static bool IsPerfectSquare(BigInteger n, out BigInteger root)
   {
     root = CalculateIntegerSquareRoot(n);
     return root * root == n;
   }
 
+  /// <summary>
+  ///   Einfacher Primalitätstest für kleine Integer-Zahlen.
+  /// </summary>
+  /// <param name="n">Die zu prüfende Zahl.</param>
+  /// <returns>True, wenn die Zahl prim ist.</returns>
   private static bool IsSmallPrime(int n)
   {
     if (n < 2)
@@ -118,6 +165,12 @@ public class CFRAC
     return true;
   }
 
+  /// <summary>
+  ///   Prüft, ob eine Zeile in einer BitMatrix nur aus Nullen besteht.
+  /// </summary>
+  /// <param name="row">Das Bit-Array der Zeile.</param>
+  /// <param name="len">Die zu prüfende Länge (Anzahl der Spalten).</param>
+  /// <returns>True, wenn alle Bits bis zur Länge len Null sind.</returns>
   private static bool IsZeroRow(BitArray row, int len)
   {
     for (int i = 0; i < len; i++)
@@ -130,7 +183,11 @@ public class CFRAC
     return true;
   }
 
-  /// <summary> Löst das Gleichungssystem über GF(2) mittels Gauß-Elimination. </summary>
+  /// <summary>
+  ///   Löst das Gleichungssystem über dem Körper GF(2) mittels Gauß-Elimination.
+  ///   Findet eine lineare Abhängigkeit der Exponentenvektoren, um ein Quadrat modulo n zu erzeugen.
+  /// </summary>
+  /// <returns>Einen nicht-trivialen Teiler von n oder -1.</returns>
   private BigInteger FindDependencyAndGcdParallel()
   {
     int rowCount = sortedSmoothRelations.Count;
@@ -158,8 +215,8 @@ public class CFRAC
       {
         (matrix[selectedRow], matrix[pivotRow]) = (matrix[pivotRow], matrix[selectedRow]);
         (history[selectedRow], history[pivotRow]) = (history[pivotRow], history[selectedRow]);
-        int currentPivot = pivotRow; // Lokale Kopie für thread-safe Capture
-        int currentCol = col; // Lokale Kopie für thread-safe Capture
+        int currentPivot = pivotRow;
+        int currentCol = col;
         Parallel.For(0, rowCount, r =>
         {
           if (r != currentPivot && matrix[r][currentCol])
@@ -196,17 +253,19 @@ public class CFRAC
     return -1;
   }
 
-  /// <summary> Erzeugt Kandidaten mittels Kettenbruch und prüft diese parallel. </summary>
+  /// <summary>
+  ///   Erzeugt Kandidaten für die Kongruenz mittels Kettenbruchentwicklung von Wurzel(n).
+  ///   Prüft diese Kandidaten parallel auf ihre "Glattheit" bezüglich der Faktorbasis.
+  /// </summary>
   private void FindSmoothRelationsParallel()
   {
-    // --- Variablen der Kettenbruchentwicklung ---
-    BigInteger rootN = CalculateIntegerSquareRoot(targetCompositeNumber); // floor(Wurzel(n))
-    BigInteger pValue = 0; // Rekursionswert P (Teil des Nenners)
-    BigInteger qValue = 1; // Rekursionswert Q (Rest-Kandidat)
-    BigInteger expansionCoefficient = rootN; // Koeffizient q (ganzzahliger Anteil)
-    BigInteger aPrevious = 1; // Vorletzter Zähler des Näherungsbruchs
-    BigInteger aCurrent = expansionCoefficient; // Aktueller Zähler des Näherungsbruchs
-    int targetCount = factorBaseSize + 20; // Benötigte Anzahl an Relationen
+    BigInteger rootN = CalculateIntegerSquareRoot(targetCompositeNumber);
+    BigInteger pValue = 0;
+    BigInteger qValue = 1;
+    BigInteger expansionCoefficient = rootN;
+    BigInteger aPrevious = 1;
+    BigInteger aCurrent = expansionCoefficient;
+    int targetCount = factorBaseSize + 20;
     while (smoothRelationsBag.Count < targetCount)
     {
       List<(BigInteger Residue, BigInteger Numerator)> candidates = new(2000);
@@ -218,8 +277,6 @@ public class CFRAC
           residue -= targetCompositeNumber;
         }
         candidates.Add((residue, aCurrent));
-
-        // Rekursion nach Morrison und Brillhart
         pValue = expansionCoefficient * qValue - pValue;
         qValue = (targetCompositeNumber - pValue * pValue) / qValue;
         expansionCoefficient = (rootN + pValue) / qValue;
@@ -227,8 +284,6 @@ public class CFRAC
         aPrevious = aCurrent;
         aCurrent = aNext;
       }
-
-      // Parallele Prüfung der Kandidaten auf Glattheit
       Parallel.ForEach(candidates, c =>
       {
         if (smoothRelationsBag.Count >= targetCount)
@@ -248,6 +303,12 @@ public class CFRAC
     }
   }
 
+  /// <summary>
+  ///   Generiert die Faktorbasis bestehend aus -1, 2 und weiteren kleinen Primzahlen,
+  ///   für die n ein quadratischer Rest ist (Legendre-Symbol = 1).
+  /// </summary>
+  /// <param name="size">Die Anzahl der zu findenden Primzahlen.</param>
+  /// <returns>Eine Liste von Primzahlen, die die Faktorbasis bilden.</returns>
   private List<int> GenerateFactorBaseParallel(int size)
   {
     List<int> primes = [-1, 2];
@@ -258,7 +319,7 @@ public class CFRAC
       List<int> found = Enumerable.Range(0, chunk)
         .Select(i => start + i * 2)
         .AsParallel()
-        .Where(IsSmallPrime) // Methodengruppe
+        .Where(IsSmallPrime)
         .Where(p => BigInteger.ModPow(targetCompositeNumber, (p - 1) / 2, p) == 1)
         .Take(size - primes.Count)
         .ToList();
@@ -268,6 +329,15 @@ public class CFRAC
     return primes.Take(size).ToList();
   }
 
+  /// <summary>
+  ///   Prüft, ob eine Zahl (Residue) vollständig in Primfaktoren aus der Faktorbasis zerlegbar ist.
+  /// </summary>
+  /// <param name="residue">Der zu prüfende Rest Q.</param>
+  /// <param name="exponentParity">
+  ///   Ein Bit-Vektor, der angibt, ob die Exponenten der Primfaktoren gerade (0) oder ungerade
+  ///   (1) sind.
+  /// </param>
+  /// <returns>True, wenn die Zahl über der Faktorbasis glatt ist.</returns>
   private bool IsNumberSmoothOverFactorBase(BigInteger residue, out BitArray exponentParity)
   {
     exponentParity = new BitArray(factorBasePrimes.Count);
@@ -300,10 +370,25 @@ public class CFRAC
     return temp == 1;
   }
 
+  /// <summary>
+  ///   Repräsentiert eine "glatte Relation".
+  ///   Speichert den Zähler A des Näherungsbruchs und den zugehörigen glatten Rest Q sowie dessen Exponenten-Parität.
+  /// </summary>
   private struct SmoothRelation
   {
-    public BigInteger congruenceQ; // Der glatte Rest Q
-    public BigInteger congruenceX; // Der Zähler A
-    public BitArray exponentParityVector; // Exponenten-Parität modulo 2
+    /// <summary>
+    ///   Der glatte Rest Q, der aus der Kettenbruchentwicklung resultiert.
+    /// </summary>
+    public BigInteger congruenceQ;
+
+    /// <summary>
+    ///   Der Zähler A des Näherungsbruchs (x), für den gilt: x² ≡ Q (mod n).
+    /// </summary>
+    public BigInteger congruenceX;
+
+    /// <summary>
+    ///   Ein Bit-Vektor, der die Parität der Exponenten der Primfaktorzerlegung von Q speichert.
+    /// </summary>
+    public BitArray exponentParityVector;
   }
 }
