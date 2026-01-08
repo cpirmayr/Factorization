@@ -17,12 +17,13 @@
     ],
     "resource": [
       {
-        "files": [ "**/*.png" ]  
+        "files": [ "**/*.png" ]
       }
     ],
     "output": "../docs",
     "template": [
-      "default"
+      "default",
+      "templates/custom"
     ]
   }
 }
