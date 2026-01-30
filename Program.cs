@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using Factorization;
 
-const int digitsCount = 30;
+const int digitsCount = 35;
 int factorizationMethod = 5;
 if (args.Length == 1 && int.TryParse(args[0], out int method))
 {
@@ -85,7 +85,7 @@ static BigInteger FactorizePollardPM1Ex(BigInt n)
 static BigInteger FactorizePollardPM1Ex1(BigInt n)
 {
   BigInt b = 2;
-  BigInt u = n.PowRoot(4, 2 * 5);
+  BigInt u = n.PowRoot(3, 2 * 5);
   BigInt l = n.PowRoot(1, 1 * 3);
   BigInt e = l * u;
   BigInt d = u - l - 1;
@@ -106,7 +106,7 @@ static BigInteger FactorizePollardPM1Ex1(BigInt n)
 /// <summary>
 /// Initialisiert die "Eimerkette" (Differenzenliste) für eine gefaltete Folge.
 /// </summary>
-/// <param name="exponent">Der Exponent der Zweierpotenz (N = 2^exponent).</param>
+/// <param name="N">Die Länge der Folge (N).</param>
 /// <param name="foldings">Die Anzahl der Faltungen (m).</param>
 /// <param name="differences">Ausgabe: Liste der Startwerte [Wert, Diff1, Diff2, ..., DiffKonstant].</param>
 static void InitializeDifferences(BigInteger N, BigInteger foldings, out List<BigInteger> differences)
@@ -167,6 +167,10 @@ static void InitializeDifferences(BigInteger N, BigInteger foldings, out List<Bi
 /// Hilfsmethode: Berechnet direkt den Wert a_n für eine gegebene Faltung,
 /// indem die Indizes rückwärts "entfaltet" werden.
 /// </summary>
+/// <param name="n">Index des Gliedes.</param>
+/// <param name="N">Länge der Folge.</param>
+/// <param name="foldings">Anzahl der Faltungen.</param>
+/// <returns>Das berechnete Glied a_n.</returns>
 static BigInteger CalculateFoldedValue(int n, BigInteger N, int foldings)
 {
   // Liste der Faktoren, die dieses Glied bilden. Wir starten mit Index n.
