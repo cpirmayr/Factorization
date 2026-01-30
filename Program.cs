@@ -48,8 +48,11 @@ static BigInteger FactorizePollardPM1(BigInteger n)
     {
       return d;
     }
+    /*
     b *= c;
     ++c;
+    */
+    ++b;
   }
 }
 
@@ -82,9 +85,8 @@ static BigInteger FactorizePollardPM1Ex(BigInt n)
 static BigInteger FactorizePollardPM1Ex1(BigInt n)
 {
   BigInt b = 2;
-  // BigInt u = n.SquareRoot(); // n.SquareRoot().Pow(3).Root(5);
-  BigInt u = n.PowRoot(4, 2 * 5); // n.SquareRoot().Pow(3).Root(5);
-  BigInt l = n.Root(4);
+  BigInt u = n.PowRoot(4, 2 * 5);
+  BigInt l = n.PowRoot(1, 1 * 3);
   BigInt e = l * u;
   BigInt d = u - l - 1;
 

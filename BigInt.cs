@@ -232,6 +232,12 @@ public struct BigInt : IComparable, IComparable<BigInt>, IEquatable<BigInt>, IFo
 
   public BigInt Even => _value.IsEven ? _value : _value + 1;
 
+  /// <summary>
+  /// Raises the current value to the specified power and then computes the specified root of the result.
+  /// </summary>
+  /// <param name="a">The exponent to which the current value is raised. Must be non-negative.</param>
+  /// <param name="b">The degree of the root to compute from the powered value. Must be greater than zero.</param>
+  /// <returns>A new BigInt representing the b-th root of the current value raised to the a-th power.</returns>
   public BigInt PowRoot(int a, int b) => Pow(a).Root(b);
 
   /// <summary>
