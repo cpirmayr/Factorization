@@ -246,7 +246,7 @@ public static class BigIntegerHelpers
     return min + value;
   }
 
-  private static BigInteger RandomBigIntegerCrypto(BigInteger min, BigInteger max)
+  public static BigInteger RandomBigIntegerCrypto(BigInteger min, BigInteger max)
   {
     BigInteger range = max - min;
     byte[] bytes = range.ToByteArray();

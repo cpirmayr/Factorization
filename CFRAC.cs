@@ -22,7 +22,7 @@ public class CFRAC
   {
     targetCompositeNumber = targetNumber;
     factorBaseSize = baseSize;
-    smoothRelationsBag = new ConcurrentBag<SmoothRelation>();
+    smoothRelationsBag = [];
   }
 
   /// <summary>
