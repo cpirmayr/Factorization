@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using Factorization;
 
-const int digitsCount = 35;
+const int digitsCount = 25;
 int factorizationMethod = 5;
 if (args.Length == 1 && int.TryParse(args[0], out int method))
 {
@@ -12,7 +12,7 @@ Factorize(digitsCount, factorizationMethod);
 
 static BigInteger FactorizePollardChebyshev(BigInt n)
 {
-  var d = n.Root(4); // n.SquareRoot().SquareRoot();
+  var d = n.Root(4);
   for (var i = 0; i < 100; ++i)
   {
     Console.WriteLine(i);
@@ -84,13 +84,17 @@ static BigInteger FactorizePollardPM1Ex(BigInt n)
 
 static BigInteger FactorizePollardPM1Ex1(BigInt n)
 {
-  BigInt b = 2;
-  BigInt u = n.PowRoot(3, 2 * 5);
-  BigInt l = n.PowRoot(1, 1 * 3);
+  BigInt limit = n.Root(3);
+  BigInt b = 3;
+  // BigInt u = n.PowRoot(4, 2 * 5);
+  // BigInt u = n.PowRoot(1, 2);
+  BigInt u = n.PowRoot(1, 3);
+  // BigInt l = n.PowRoot(1, 1 * 2);
+  BigInt l = n.PowRoot(1, 4);
   BigInt e = l * u;
   BigInt d = u - l - 1;
 
-  while (true)
+  for (int i = 0; i < limit; ++i)
   {
     b = b.PowerMod(e, n);
     BigInt r = BigInt.GreatestCommonDivisor(b - 1, n);
@@ -98,9 +102,14 @@ static BigInteger FactorizePollardPM1Ex1(BigInt n)
     {
       return r;
     }
+    else if (r == n)
+    {
+      return n;
+    }
     e += d;
     d -= 2;
   }
+  return 1;
 }
 
 /// <summary>
