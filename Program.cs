@@ -85,12 +85,9 @@ static BigInteger FactorizePollardPM1Ex(BigInt n)
 static BigInteger FactorizePollardPM1Ex1(BigInt n)
 {
   BigInt limit = n.Root(3);
-  BigInt b = 3;
-  // BigInt u = n.PowRoot(4, 2 * 5);
-  // BigInt u = n.PowRoot(1, 2);
-  BigInt u = n.PowRoot(1, 3);
-  // BigInt l = n.PowRoot(1, 1 * 2);
-  BigInt l = n.PowRoot(1, 4);
+  BigInt b = 2;
+  BigInt u = n.PowRoot(1, 2);
+  BigInt l = n.PowRoot(1, 3);
   BigInt e = l * u;
   BigInt d = u - l - 1;
 
@@ -112,12 +109,6 @@ static BigInteger FactorizePollardPM1Ex1(BigInt n)
   return 1;
 }
 
-/// <summary>
-/// Initialisiert die "Eimerkette" (Differenzenliste) für eine gefaltete Folge.
-/// </summary>
-/// <param name="N">Die Länge der Folge (N).</param>
-/// <param name="foldings">Die Anzahl der Faltungen (m).</param>
-/// <param name="differences">Ausgabe: Liste der Startwerte [Wert, Diff1, Diff2, ..., DiffKonstant].</param>
 static void InitializeDifferences(BigInteger N, BigInteger foldings, out List<BigInteger> differences)
 {
   // Konvertierung in int für Schleifen (physikalisch limitiert durch RAM/CPU, daher sicher)
@@ -172,14 +163,6 @@ static void InitializeDifferences(BigInteger N, BigInteger foldings, out List<Bi
   // Damit kann die iterative Addition ("Eimerkette") gestartet werden.
 }
 
-/// <summary>
-/// Hilfsmethode: Berechnet direkt den Wert a_n für eine gegebene Faltung,
-/// indem die Indizes rückwärts "entfaltet" werden.
-/// </summary>
-/// <param name="n">Index des Gliedes.</param>
-/// <param name="N">Länge der Folge.</param>
-/// <param name="foldings">Anzahl der Faltungen.</param>
-/// <returns>Das berechnete Glied a_n.</returns>
 static BigInteger CalculateFoldedValue(int n, BigInteger N, int foldings)
 {
   // Liste der Faktoren, die dieses Glied bilden. Wir starten mit Index n.

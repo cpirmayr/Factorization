@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Concurrent;
 using System.Numerics;
+using System.Collections.Generic;
 
 namespace Factorization;
 

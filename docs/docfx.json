@@ -4,7 +4,7 @@
       "src": [
         {
           "cwd": ".",
-          "files": [ "Factorization.csproj", "**/*.cs" ],
+          "files": [ "Factorization.csproj" ],
           "src": "../"
         }
       ],
