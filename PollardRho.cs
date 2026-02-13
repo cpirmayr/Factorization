@@ -45,7 +45,7 @@ public static class PollardRho
 
   private static BigInteger NextElement1(BigInteger a, BigInteger n)
   {
-    return BigIntegerHelpers.CalculateChebyshev(a, a + 2, n);
+    return BigInt.CalculateChebyshev(a, a + 2, n);
   }
 
   private static BigInteger NextElement2(BigInteger a, BigInteger n)
