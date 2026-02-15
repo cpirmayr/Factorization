@@ -149,16 +149,16 @@ public struct BigInt : IComparable, IComparable<BigInt>, IEquatable<BigInt>, IFo
 
   public static explicit operator BigInt(decimal value) => new(value);
   public static explicit operator BigInt(double value) => new(value);
-  public static explicit operator byte(BigInt value) => (byte)value._value;
-  public static explicit operator sbyte(BigInt value) => (sbyte)value._value;
-  public static explicit operator short(BigInt value) => (short)value._value;
-  public static explicit operator ushort(BigInt value) => (ushort)value._value;
-  public static explicit operator int(BigInt value) => (int)value._value;
-  public static explicit operator uint(BigInt value) => (uint)value._value;
-  public static explicit operator long(BigInt value) => (long)value._value;
-  public static explicit operator ulong(BigInt value) => (ulong)value._value;
-  public static explicit operator decimal(BigInt value) => (decimal)value._value;
-  public static explicit operator double(BigInt value) => (double)value._value;
+  public static explicit operator byte(BigInt value) => (byte) value._value;
+  public static explicit operator sbyte(BigInt value) => (sbyte) value._value;
+  public static explicit operator short(BigInt value) => (short) value._value;
+  public static explicit operator ushort(BigInt value) => (ushort) value._value;
+  public static explicit operator int(BigInt value) => (int) value._value;
+  public static explicit operator uint(BigInt value) => (uint) value._value;
+  public static explicit operator long(BigInt value) => (long) value._value;
+  public static explicit operator ulong(BigInt value) => (ulong) value._value;
+  public static explicit operator decimal(BigInt value) => (decimal) value._value;
+  public static explicit operator double(BigInt value) => (double) value._value;
 
   // ====================================================================
   // INTERFACE-IMPLEMENTIERUNGEN
@@ -217,7 +217,7 @@ public struct BigInt : IComparable, IComparable<BigInt>, IEquatable<BigInt>, IFo
   {
     if (left.IsZero || right.IsZero)
       return Zero;
-    
+
     BigInt gcd = GreatestCommonDivisor(left, right);
     return Abs((left / gcd) * right);
   }
@@ -554,7 +554,7 @@ public struct BigInt : IComparable, IComparable<BigInt>, IEquatable<BigInt>, IFo
       for (int i = 0; i < exponent; i++)
       {
         BigInt reducedOrder = order / prime;
-        
+
         // Prüfe, ob a^(order/prime) ≡ 1 (mod p)
         if (a.PowerMod(reducedOrder, p) == 1)
         {
@@ -613,7 +613,7 @@ public struct BigInt : IComparable, IComparable<BigInt>, IEquatable<BigInt>, IFo
     // Für größere Primzahlen: teste zufällige Kandidaten
     // Im Durchschnitt ist etwa φ(p-1)/(p-1) der Zahlen eine primitive Wurzel
     // Für Primzahlen ist das typischerweise etwa 1/log(log(p))
-    
+
     Random rng = new();
     int maxAttempts = 1000;
 
@@ -650,7 +650,7 @@ public struct BigInt : IComparable, IComparable<BigInt>, IEquatable<BigInt>, IFo
     if (n < 0) throw new ArgumentOutOfRangeException(nameof(n));
     if (n < 2) return n;
 
-    int bitLength = (int)n.GetBitLength();
+    int bitLength = (int) n.GetBitLength();
     BigInt x = One << ((bitLength + 1) / 2);
 
     while (true)
@@ -720,14 +720,14 @@ public struct BigInt : IComparable, IComparable<BigInt>, IEquatable<BigInt>, IFo
   /// Berechnet das k-te Chebyshev-Polynom erster Art: T_k(x) mod n.
   /// Verwendet einen binären Leiteralgorithmus für effiziente Berechnung.
   /// </summary>
-  public static BigInt CalculateChebyshev(BigInt x, BigInt k, BigInt n)
+  public static BigInt Chebyshev(BigInt x, BigInt k, BigInt n)
   {
     if (k.IsZero) return One;
     if (k.IsOne) return Mod(x, n);
 
     BigInt a = One;
     BigInt b = Mod(x, n);
-    int bitLength = (int)k.GetBitLength();
+    int bitLength = (int) k.GetBitLength();
 
     for (int i = bitLength - 1; i >= 0; i--)
     {
@@ -754,7 +754,7 @@ public struct BigInt : IComparable, IComparable<BigInt>, IEquatable<BigInt>, IFo
   {
     BigInt a = One;
     BigInt b = Mod(x, n);
-    int bitLength = (int)k.GetBitLength();
+    int bitLength = (int) k.GetBitLength();
 
     for (int i = bitLength - 1; i >= 0; i--)
     {
@@ -784,7 +784,7 @@ public struct BigInt : IComparable, IComparable<BigInt>, IEquatable<BigInt>, IFo
 
     for (int i = 0; i < maxIterations; i++)
     {
-      long a = (long)Math.Floor(value);
+      long a = (long) Math.Floor(value);
       long p = a * p1 + p0;
       long q = a * q1 + q0;
       yield return (p, q);
@@ -901,7 +901,7 @@ public struct BigInt : IComparable, IComparable<BigInt>, IEquatable<BigInt>, IFo
   /// </summary>
   public static void InitializeDifferences(BigInt N, BigInt foldings, out List<BigInt> differences)
   {
-    int m = (int)foldings._value;
+    int m = (int) foldings._value;
     int degree = 1 << m;
 
     List<BigInt> sequenceValues = new();
@@ -1378,7 +1378,7 @@ public struct BigInt : IComparable, IComparable<BigInt>, IEquatable<BigInt>, IFo
 
       for (int i = windowStart; i >= windowEnd; i--)
       {
-        if (IsBitSet(exponent, i))    
+        if (IsBitSet(exponent, i))
         {
           windowValue = (windowValue << 1) | 1;
           windowLength++;
@@ -1421,24 +1421,52 @@ public struct BigInt : IComparable, IComparable<BigInt>, IEquatable<BigInt>, IFo
     return result;
   }
 
+  public static BigInt PowModStandard(BigInt b, BigInt e, BigInt n)
+  {
+    BigInt r = 1;
+    BigInt p = b;
+    while (true)
+    {
+      if (!e.IsEven)
+      {
+        r = r.MulMod(p, n);
+      }
+      e >>= 1;
+      if (e.IsZero)
+      {
+        return r;
+      }
+      p = p.SquareMod(n);
+    }
+  }
+
   // Hilfsfunktion: Prüft ob das i-te Bit gesetzt ist (0 = LSB)
   private static bool IsBitSet(BigInteger value, int bitPosition)
   {
     return (value & (BigInteger.One << bitPosition)) != BigInteger.Zero;
   }
 
-}
-
-/// <summary>
-/// Extension-Methoden für BigInt und IEnumerable.
-/// </summary>
-public static class BigIntExtensions
-{
-  /// <summary>
-  /// Gibt das n-te Element eines IEnumerable zu Testzwecken aus.
-  /// </summary>
-  public static void Test<T>(this IEnumerable<T> enumerable, int index)
+  public class PowModState(BigInt p, BigInt e, BigInt n, Action<PowModState>? resetAction)
   {
-    Console.WriteLine(enumerable.ElementAtOrDefault(index));
+    public BigInt b = p;
+    public BigInt e = e;
+    public BigInt n = n;
+    public BigInt r = 1;
+
+    public bool Step()
+    {
+      if (!e.IsEven)
+      {
+        r = r.MulMod(b, n);
+      }
+      e >>= 1;
+      if (e.IsZero)
+      {
+        resetAction?.Invoke(this);
+        return false;
+      }
+      b = b.SquareMod(n);
+      return true;
+    }
   }
 }
