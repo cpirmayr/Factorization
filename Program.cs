@@ -1,25 +1,27 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 using System.Numerics;
 
 namespace Factorization
 {
   internal class Program
   {
-    const int MinDigitsCount = 15;
-    const int MaxDigitsCount = 20;
-    const int nrOfTestPasses = 10;
+    const int MinDigitsCount = 30;
+    const int MaxDigitsCount = 30;
+    const int nrOfTestPasses = 1;
 
-    private static readonly List<Tests> tests = [Tests.PollardPm1PowMod, Tests.PollardPm1Standard];
+    private static readonly List<Tests> tests = [Tests.PollardPm1PowMod, Tests.ShanksSqrfof];
 
     private static void Main()
     {
-      Random random = new(1234);
+      Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+      Random random = new(); // new(1234);
       TestResults testResults = [];
       for (var digitsCount = MinDigitsCount; digitsCount <= MaxDigitsCount; ++digitsCount)
       {
         for (var i = 0; i < nrOfTestPasses; ++i)
         {
-          Console.WriteLine($"========= {i}");
+          Console.WriteLine($"========= Pass {i}");
           BigInt n = BigInt.GenerateSemiPrime(digitsCount, out var p, out var q, random.Next());
           Console.WriteLine($"n: {n}");
           var pM1Factors = BigInt.Factorize(p - 1);
@@ -28,13 +30,26 @@ namespace Factorization
           Console.WriteLine($"q-1: {string.Join(", ", qM1Factors.Select(factor => factor.prime))}");
           PerformTestsForPQ(digitsCount, p, q, ref testResults);
         }
-        foreach (var testResult in testResults)
-        {
-          Console.WriteLine(testResult.Key.ToString());
-          Console.WriteLine(testResult.Value.testEntries.Select(item => item.seconds).Median());
-        }
       }
-      var a = 0;
+      /*
+      foreach (var test in tests)
+      {
+        var testEntries = testResults.Where(item => item.test == test).ToArray();
+        List<string> lines = new();
+
+        for (var j = MinDigitsCount; j <= MaxDigitsCount; ++j)
+        {
+          var digitsEntries = testEntries.Where(item => item.digitsCount == j).ToArray();
+          var numbers = digitsEntries.Select(item => (BigInteger) item.n).ToArray();
+          var ticks = digitsEntries.Select(item => item.ticks).ToArray();
+          var medianNumber = numbers.Median();
+          var medianTick = ticks.Median();
+          lines.Add($"{medianNumber};{((double) medianTick / Stopwatch.Frequency).ToPlain()}");
+        }
+
+        File.WriteAllLines("C:\\Usr\\" + test.ToString() + ".txt", lines);
+      }
+      */
     }
 
     private static void PerformTestsForPQ(int digitsCount, BigInt p, BigInt q, ref TestResults testResults)
@@ -42,31 +57,26 @@ namespace Factorization
       BigInt n = p * q;
       foreach (var test in tests)
       {
-        if (!testResults.TryGetValue(test, out var testResult))
-        {
-          testResult = new();
-          testResults.Add(test, testResult);
-        }
-        var watch = new Stopwatch();
+        Stopwatch watch = new();
         Console.WriteLine($"--------- {test}");
         watch.Start();
         BigInt result = 0;
         BigInt iterations = 0;
-        double seconds = 0.0;
+        long ticks;
         try
         {
           result = PerformTestForPQ(p, q, test, out iterations);
         }
         finally
         {
-          seconds = watch.ElapsedMilliseconds / 1000.0;
+          ticks = watch.ElapsedTicks;
         }
-        if (0 < result)
+        if (1 < result && result < n)
         {
           Console.WriteLine($"{result} x {n / result}");
           Console.WriteLine($"Iterations: {iterations}");
-          Console.WriteLine($"Duration: {seconds} s");
-          testResult.testEntries.Add(new TestEntry(digitsCount, n, iterations, seconds));
+          Console.WriteLine($"Duration: {Math.Round((double) ticks / Stopwatch.Frequency, 3)} s");
+          testResults.Add(new TestEntry(digitsCount, n, test, iterations, ticks));
         }
       }
     }
@@ -88,6 +98,9 @@ namespace Factorization
         Tests.PollardPm1TopBottomInverse => PollardPm1TopBottomInverse(n, out iterations),
         Tests.PollardPm1PowMod => PollardPm1PowMod(n, out iterations),
         Tests.PollardRhoPowMod => PollardRhoPowMod(n, out iterations),
+        Tests.PollardPm1Reference => PollardPm1Reference(n),
+        Tests.ShanksSqrfof => ShanksSqufof(n),
+        Tests.CurrentTest => PollardPm1PowModExperimental(n, out iterations),
         _ => 1
       };
     }
@@ -158,6 +171,7 @@ namespace Factorization
     static BigInteger PollardPm1SelfReferential(BigInt n, out BigInt iterations)
     {
       iterations = 0;
+      BigInt nDiv2 = n / 2;
       BigInt a = 2;
       while (true)
       {
@@ -181,24 +195,17 @@ namespace Factorization
       BigInt a = 2;
       BigInt e = a;
       BigInt r = 1;
-      BigInt t = 1;
-      BigInt l = n * 10;
-      BigInt limit = n.Root(3);
+      BigInt limit = n.Power(2, 5);
       while (iterations < limit)
       {
         if (!e.IsEven)
         {
           ++iterations;
           r = r.MulMod(a, n);
-          t *= r;
-          if (l < t)
+          BigInt d = BigInt.GreatestCommonDivisor(r - 1, n);
+          if (d != 1)
           {
-            BigInt d = BigInt.GreatestCommonDivisor(r - 1, n);
-            if (d != 1)
-            {
-              return d == n ? n : d;
-            }
-            t = 1;
+            return d == n ? n : d;
           }
         }
         e >>= 1;
@@ -207,6 +214,39 @@ namespace Factorization
           a = r;
           e = a;
           r = 1;
+        }
+        a = a.SquareMod(n);
+      }
+      return 0;
+    }
+
+    static BigInteger PollardPm1PowModExperimental(BigInt n, out BigInt iterations)
+    {
+      iterations = 0;
+      bool checkEven = true;
+      BigInt a = 2;
+      BigInt e = a;
+      BigInt r = 1;
+      BigInt limit = n.Power(2, 5);
+      while (iterations < limit)
+      {
+        if ((checkEven && e.IsEven) || (!checkEven && !e.IsEven))
+        {
+          ++iterations;
+          r = r.MulMod(a, n);
+          BigInt d = BigInt.GreatestCommonDivisor(r - 1, n);
+          if (d != 1)
+          {
+            return d == n ? n : d;
+          }
+        }
+        e >>= 1;
+        if (e.IsZero)
+        {
+          a = r;
+          e = a;
+          r = 1;
+          checkEven = !checkEven;
         }
         a = a.SquareMod(n);
       }
@@ -314,22 +354,31 @@ namespace Factorization
         ++b;
       }
     }
+
+    static BigInt PollardPm1Reference(BigInt n)
+    {
+      var pollard = new PollardPMinus1(n.Power(2,5));
+      PollardPMinus1.ComputeBound(n);
+      var result = pollard.Factor(n);
+      return result;
+    }
+
+    static BigInt ShanksSqufof(BigInt n)
+    {
+      return Squfof.Factor(n);
+    }
   }
 
-  public class TestEntry(int digitsCount, BigInt n, BigInt iterations, double seconds)
+  public class TestEntry(int digitsCount, BigInt n, Tests test, BigInt iterations, long ticks)
   {
     public int digitsCount = digitsCount;
     public BigInt n = n;
+    public Tests test = test;
     public BigInt iterations = iterations;
-    public double seconds = seconds;
+    public long ticks = ticks;
   }
 
-  public class TestResult
-  {
-    public List<TestEntry> testEntries = [];
-  }
-
-  public class TestResults : Dictionary<Tests, TestResult>
+  public class TestResults : List<TestEntry>
   {
   }
 }

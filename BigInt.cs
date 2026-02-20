@@ -1421,6 +1421,35 @@ public struct BigInt : IComparable, IComparable<BigInt>, IEquatable<BigInt>, IFo
     return result;
   }
 
+  public BigInt Power(int e)
+  {
+    BigInt r = 1;
+    BigInt p = _value;
+    while (true)
+    {
+      if (e % 2 == 1)
+      {
+        r *= p;
+      }
+      e >>= 1;
+      if (e == 0)
+      {
+        return r;
+      }
+      p = p.Square();
+    }
+  }
+
+  public BigInt Square()
+  {
+    return _value * _value;
+  }
+
+  public BigInt Power(int n, int d)
+  {
+    return Root(d).Power(n);
+  }
+
   public static BigInt PowModStandard(BigInt b, BigInt e, BigInt n)
   {
     BigInt r = 1;

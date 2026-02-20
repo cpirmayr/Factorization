@@ -12,5 +12,8 @@ public enum Tests
   PollardPm1TopBottom,
   PollardPm1TopBottomInverse,
   PollardPm1PowMod,
-  PollardRhoPowMod
+  PollardRhoPowMod,
+  CurrentTest,
+  PollardPm1Reference,
+  ShanksSqrfof
 }
