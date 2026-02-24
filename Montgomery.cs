@@ -50,11 +50,11 @@ public sealed class Montgomery
 
         // Berechne nInv = -n^(-1) mod R
         // Dies ist der Schlüsselwert für die Montgomery-Reduktion
-        nInv = (-ModInverse(n, r)) & rMask;
+        nInv = -ModInverse(n, r) & rMask;
 
         // OPTIMIERUNG: Vorberechne häufig benötigte Werte
         rModN = r % n;           // R mod n
-        r2ModN = (r * r) % n;    // R² mod n (für schnelle ToMontgomery-Konvertierung)
+        r2ModN = r * r % n;    // R² mod n (für schnelle ToMontgomery-Konvertierung)
 
         exponentBytes = [];
     }
@@ -119,8 +119,9 @@ public sealed class Montgomery
         // Nach obiger Operation gilt: 0 kleiner-gleich u kleiner 2n
         // Eine einzige bedingte Subtraktion genügt
         if (u >= n)
-            u -= n;
-
+        {
+          u -= n;
+        }
         return u;
     }
 
@@ -144,7 +145,9 @@ public sealed class Montgomery
         // Normalisiere x auf [0, n)
         x %= n;
         if (x.Sign < 0)
-            x += n;
+        {
+          x += n;
+        }
 
         // OPTIMIERUNG: Nutze vorberechnetes R² mod n
         // x·R mod n = REDC(x · R²) weil:
@@ -241,8 +244,9 @@ public sealed class Montgomery
 
         // Normalisiere Ergebnis auf [0, m)
         if (t.Sign < 0)
-            t += m;
-
+        {
+          t += m;
+        }
         return t;
     }
 

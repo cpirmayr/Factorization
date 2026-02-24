@@ -2,383 +2,178 @@
 using System.Globalization;
 using System.Numerics;
 
-namespace Factorization
+namespace Factorization;
+
+internal class Program
 {
-  internal class Program
-  {
-    const int MinDigitsCount = 30;
-    const int MaxDigitsCount = 30;
-    const int nrOfTestPasses = 1;
-
-    private static readonly List<Tests> tests = [Tests.PollardPm1PowMod, Tests.ShanksSqrfof];
-
-    private static void Main()
-    {
-      Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-      Random random = new(); // new(1234);
-      TestResults testResults = [];
-      for (var digitsCount = MinDigitsCount; digitsCount <= MaxDigitsCount; ++digitsCount)
-      {
-        for (var i = 0; i < nrOfTestPasses; ++i)
-        {
-          Console.WriteLine($"========= Pass {i}");
-          BigInt n = BigInt.GenerateSemiPrime(digitsCount, out var p, out var q, random.Next());
-          Console.WriteLine($"n: {n}");
-          var pM1Factors = BigInt.Factorize(p - 1);
-          var qM1Factors = BigInt.Factorize(q - 1);
-          Console.WriteLine($"p-1: {string.Join(", ", pM1Factors.Select(factor => factor.prime))}");
-          Console.WriteLine($"q-1: {string.Join(", ", qM1Factors.Select(factor => factor.prime))}");
-          PerformTestsForPQ(digitsCount, p, q, ref testResults);
-        }
-      }
-      /*
-      foreach (var test in tests)
-      {
-        var testEntries = testResults.Where(item => item.test == test).ToArray();
-        List<string> lines = new();
-
-        for (var j = MinDigitsCount; j <= MaxDigitsCount; ++j)
-        {
-          var digitsEntries = testEntries.Where(item => item.digitsCount == j).ToArray();
-          var numbers = digitsEntries.Select(item => (BigInteger) item.n).ToArray();
-          var ticks = digitsEntries.Select(item => item.ticks).ToArray();
-          var medianNumber = numbers.Median();
-          var medianTick = ticks.Median();
-          lines.Add($"{medianNumber};{((double) medianTick / Stopwatch.Frequency).ToPlain()}");
-        }
-
-        File.WriteAllLines("C:\\Usr\\" + test.ToString() + ".txt", lines);
-      }
-      */
-    }
-
-    private static void PerformTestsForPQ(int digitsCount, BigInt p, BigInt q, ref TestResults testResults)
-    {
-      BigInt n = p * q;
-      foreach (var test in tests)
-      {
-        Stopwatch watch = new();
-        Console.WriteLine($"--------- {test}");
-        watch.Start();
-        BigInt result = 0;
-        BigInt iterations = 0;
-        long ticks;
-        try
-        {
-          result = PerformTestForPQ(p, q, test, out iterations);
-        }
-        finally
-        {
-          ticks = watch.ElapsedTicks;
-        }
-        if (1 < result && result < n)
-        {
-          Console.WriteLine($"{result} x {n / result}");
-          Console.WriteLine($"Iterations: {iterations}");
-          Console.WriteLine($"Duration: {Math.Round((double) ticks / Stopwatch.Frequency, 3)} s");
-          testResults.Add(new TestEntry(digitsCount, n, test, iterations, ticks));
-        }
-      }
-    }
-
-    static BigInt PerformTestForPQ(BigInt p, BigInt q, Tests test, out BigInt iterations)
-    {
-      BigInt n = p * q;
-      iterations = 0;
-      return test switch
-      {
-        Tests.PollardRho => PollardRho.Factorize(n),
-        Tests.CFRAC => CFRAC.Factorize(n),
-        Tests.PollardRhoChebyshev => PollardRhoChebyshev(n, out iterations),
-        Tests.PollardPm1Standard => PollardPm1Standard(n, out iterations),
-        Tests.PollardPm1SelfReferential => PollardPm1SelfReferential(n, out iterations),
-        Tests.PollardPm1WithMultipleFoldings => PollardPm1WithMultipleFoldings(n, out iterations),
-        Tests.PollardPm1WithOneFoldingAndLimits => PollardPm1WithOneFoldingAndLimits(n, out iterations),
-        Tests.PollardPm1TopBottom => PollardPm1TopBottom(n, out iterations),
-        Tests.PollardPm1TopBottomInverse => PollardPm1TopBottomInverse(n, out iterations),
-        Tests.PollardPm1PowMod => PollardPm1PowMod(n, out iterations),
-        Tests.PollardRhoPowMod => PollardRhoPowMod(n, out iterations),
-        Tests.PollardPm1Reference => PollardPm1Reference(n),
-        Tests.ShanksSqrfof => ShanksSqufof(n),
-        Tests.CurrentTest => PollardPm1PowModExperimental(n, out iterations),
-        _ => 1
-      };
-    }
-
-    static BigInteger PollardRhoChebyshev(BigInt n, out BigInt iterations)
-    {
-      iterations = 0;
-      BigInt a = 2;
-      BigInt b = 2;
-      while (true)
-      {
-        ++iterations;
-        a = BigInt.Chebyshev(a, a, n);
-        a = BigInt.Chebyshev(a, a, n);
-        b = BigInt.Chebyshev(b, b, n);
-        BigInt d = BigInt.GreatestCommonDivisor(a - b, n);
-        if (d != 1)
-        {
-          return d;
-        }
-        else if (d == n)
-        {
-          return n;
-        }
-      }
-    }
-
-    static BigInteger PollardRhoPowMod(BigInt n, out BigInt iterations)
-    {
-      iterations = 0;
-      var resetAction = (BigInt.PowModState state) => { state.b = state.r; state.e = state.b; state.r = 1; };
-      BigInt.PowModState stepA = new(3, 3, n, resetAction);
-      BigInt.PowModState stepB = new(3, 3, n, resetAction);
-      while (true)
-      {
-        ++iterations;
-        stepA.Step();
-        stepA.Step();
-        stepB.Step();
-        BigInt d = BigInt.GreatestCommonDivisor(stepA.r - stepB.r, n);
-        if (d != 1 && d != n)
-        {
-          return d;
-        }
-      }
-    }
-
-    static BigInteger PollardPm1Standard(BigInt n, out BigInt iterations)
-    {
-      iterations = 0;
-      BigInt a = 2;
-      BigInt b = 2;
-      BigInt limit = n.Root(3);
-      while (iterations < limit)
-      {
-        ++iterations;
-        a = a.PowerMod(b, n);
-        BigInt d = BigInt.GreatestCommonDivisor(a - 1, n);
-        if (d != 1)
-        {
-          return d == n ? n : d;
-        }
-        b += 1;
-      }
-      return 0;
-    }
-
-    static BigInteger PollardPm1SelfReferential(BigInt n, out BigInt iterations)
-    {
-      iterations = 0;
-      BigInt nDiv2 = n / 2;
-      BigInt a = 2;
-      while (true)
-      {
-        ++iterations;
-        a = a.PowerMod(a, n);
-        BigInt d = BigInt.GreatestCommonDivisor(a - 1, n);
-        if (d != 1)
-        {
-          return d;
-        }
-        else if (d == n)
-        {
-          return n;
-        }
-      }
-    }
-
-    static BigInteger PollardPm1PowMod(BigInt n, out BigInt iterations)
-    {
-      iterations = 0;
-      BigInt a = 2;
-      BigInt e = a;
-      BigInt r = 1;
-      BigInt limit = n.Power(2, 5);
-      while (iterations < limit)
-      {
-        if (!e.IsEven)
-        {
-          ++iterations;
-          r = r.MulMod(a, n);
-          BigInt d = BigInt.GreatestCommonDivisor(r - 1, n);
-          if (d != 1)
-          {
-            return d == n ? n : d;
-          }
-        }
-        e >>= 1;
-        if (e.IsZero)
-        {
-          a = r;
-          e = a;
-          r = 1;
-        }
-        a = a.SquareMod(n);
-      }
-      return 0;
-    }
-
-    static BigInteger PollardPm1PowModExperimental(BigInt n, out BigInt iterations)
-    {
-      iterations = 0;
-      bool checkEven = true;
-      BigInt a = 2;
-      BigInt e = a;
-      BigInt r = 1;
-      BigInt limit = n.Power(2, 5);
-      while (iterations < limit)
-      {
-        if ((checkEven && e.IsEven) || (!checkEven && !e.IsEven))
-        {
-          ++iterations;
-          r = r.MulMod(a, n);
-          BigInt d = BigInt.GreatestCommonDivisor(r - 1, n);
-          if (d != 1)
-          {
-            return d == n ? n : d;
-          }
-        }
-        e >>= 1;
-        if (e.IsZero)
-        {
-          a = r;
-          e = a;
-          r = 1;
-          checkEven = !checkEven;
-        }
-        a = a.SquareMod(n);
-      }
-      return 0;
-    }
-
-    static BigInteger PollardPm1WithMultipleFoldings(BigInt n, out BigInt iterations)
-    {
-      iterations = 0;
-      BigInt a = 2;
-      BigInt b = n.SquareRoot().Even;
-      BigInt.InitializeDifferences(b, 2, out var differences);
-      while (true)
-      {
-        ++iterations;
-        a = a.PowerMod(differences[0], n);
-        BigInt d = BigInt.GreatestCommonDivisor(a - 1, n);
-        if (d != 1)
-        {
-          return d;
-        }
-        if (d == n)
-        {
-          return 1;
-        }
-        for (int i = 0; i < differences.Count - 1; ++i)
-        {
-          differences[i] += differences[i + 1];
-        }
-      }
-    }
-
-    static BigInteger PollardPm1WithOneFoldingAndLimits(BigInt n, out BigInt iterations)
-    {
-      iterations = 0;
-      BigInt limit = n.Root(3);
-      BigInt b = 2;
-      BigInt u = n.PowRoot(1, 3);
-      BigInt l = n.PowRoot(1, 5);
-      Console.WriteLine($"l: {l}");
-      Console.WriteLine($"u: {u}");
-      BigInt e = l * u;
-      BigInt d = u - l - 1;
-      for (int i = 0; i < limit; ++i)
-      {
-        ++iterations;
-        b = b.PowerMod(e, n);
-        BigInt r = BigInt.GreatestCommonDivisor(b - 1, n);
-        if (r != 1)
-        {
-          return r;
-        }
-        else if (r == n)
-        {
-          return n;
-        }
-        e += d;
-        d -= 2;
-      }
-      return 1;
-    }
-
-    static BigInteger PollardPm1TopBottom(BigInt n, out BigInt iterations)
-    {
-      iterations = 0;
-      BigInt limit = n.Root(3);
-      BigInt a = 2;
-      BigInt b = n;
-      for (int i = 0; i < limit; ++i)
-      {
-        ++iterations;
-        a = a.PowerMod(b, n);
-        BigInt d = BigInt.GreatestCommonDivisor(a - 1, n);
-        if (d != 1)
-        {
-          return d;
-        }
-        else if (d == n)
-        {
-          return n;
-        }
-        --b;
-      }
-      return 1;
-    }
-
-    static BigInteger PollardPm1TopBottomInverse(BigInt n, out BigInt iterations)
-    {
-      iterations = 0;
-      BigInt a = 2;
-      BigInt b = 2;
-      while (true)
-      {
-        ++iterations;
-        a = a.PowerMod(n, n).MulMod(a.PowerMod(b, n).InvMod(n)!.Value, n);
-        BigInt e = BigInt.GreatestCommonDivisor(a - 1, n);
-        if (e != 1)
-        {
-          return e;
-        }
-        else if (e == n)
-        {
-          return n;
-        }
-        ++b;
-      }
-    }
-
-    static BigInt PollardPm1Reference(BigInt n)
-    {
-      var pollard = new PollardPMinus1(n.Power(2,5));
-      PollardPMinus1.ComputeBound(n);
-      var result = pollard.Factor(n);
-      return result;
-    }
-
-    static BigInt ShanksSqufof(BigInt n)
-    {
-      return Squfof.Factor(n);
-    }
-  }
-
   public class TestEntry(int digitsCount, BigInt n, Tests test, BigInt iterations, long ticks)
   {
     public int digitsCount = digitsCount;
+    public BigInt iterations = iterations;
     public BigInt n = n;
     public Tests test = test;
-    public BigInt iterations = iterations;
     public long ticks = ticks;
   }
 
-  public class TestResults : List<TestEntry>
+  public class TestResults : List<TestEntry>;
+
+  private const int DigitsPasses = 1;
+  private const int MinDigitsCount = 20;
+  private const int NrOfTestPasses = 1;
+
+  private static readonly List<Tests> Tests = [Factorization.Tests.CFRAC, Factorization.Tests.PollardPm1PowerMod];
+
+  private static void FactorBaseExperiments()
   {
+    Random random = new();
+    BigInt n = BigInt.GenerateSemiPrime(MinDigitsCount, out BigInt _, out BigInt _, random.Next());
+    Console.WriteLine($"n: {n}");
+    BigInt primesLimit = n.Root(8);
+    List<BigInt> primes = Enumerable.Range(2, (int) primesLimit).Where(static item => BigInt.IsProbablePrime(item)).Select(static item => (BigInt) item).ToList();
+    List<int[]> relations = [];
+    HashSet<BigInt> usedPrimes = [];
+    foreach ((BigInt p, BigInt q) in SqrtContinuedFraction.ConvergentsOfSqrt(n, int.MaxValue))
+    {
+      BigInt d = BigInt.Abs(p * p - n * q * q); // 2744102684715;
+      int[] relation = Enumerable.Repeat(0, primes.Count).ToArray();
+      List<BigInteger> factors = [];
+      // foreach (int prime in primes)
+      for (int primesIndex = 0; primesIndex < primes.Count; ++primesIndex)
+      {
+        BigInteger prime = primes[primesIndex];
+        bool factorUsed = false;
+        BigInt newD = BigInt.DivRem(d, prime, out BigInt remainder);
+        while (remainder == 0)
+        {
+          relation[primesIndex]++;
+          usedPrimes.Add(prime);
+          d = newD;
+          newD = BigInt.DivRem(d, prime, out remainder);
+          factorUsed = true;
+        }
+        if (factorUsed)
+        {
+          factors.Add(prime);
+        }
+      }
+      if (d == 1)
+      {
+        relations.Add(relation);
+      }
+      if (1 < relations.Count && usedPrimes.Count < relations.Count && relations.Count % 20 == 0)
+      {
+        BigInt square = BigInt.FindRootOfSquareFromFactorBase(relations, primes, out List<int> usedIndices, n);
+        if (1 < square)
+        {
+          Console.WriteLine($"Square: {square}");
+          return;
+        }
+      }
+    }
   }
+
+  private static void Main()
+  {
+    Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+    if (PerformFactorizations)
+    {
+      Random random = new();
+      TestResults? testResults = PerformTests ? [] : null;
+      const int maxDigitsCount = MinDigitsCount + DigitsPasses - 1;
+      for (int digitsCount = MinDigitsCount; digitsCount <= maxDigitsCount; ++digitsCount)
+      {
+        for (int i = 0; i < NrOfTestPasses; ++i)
+        {
+          Console.WriteLine($"========= Pass {i}");
+          BigInt n = BigInt.GenerateSemiPrime(digitsCount, out BigInt p, out BigInt q, random.Next());
+          Console.WriteLine($"n: {n}");
+          List<(BigInt prime, int exponent)> pM1Factors = BigInt.Factorize(p - 1);
+          List<(BigInt prime, int exponent)> qM1Factors = BigInt.Factorize(q - 1);
+          Console.WriteLine($"p-1: {string.Join(", ", pM1Factors.Select(factor => factor.prime))}");
+          Console.WriteLine($"q-1: {string.Join(", ", qM1Factors.Select(factor => factor.prime))}");
+          PerformPQTests(digitsCount, p, q, ref testResults);
+        }
+      }
+      if (PerformTests && testResults != null)
+      {
+        foreach (Tests test in Tests)
+        {
+          TestEntry[] testEntries = testResults.Where(item => item.test == test).ToArray();
+          List<string> lines = [];
+          for (int j = MinDigitsCount; j <= maxDigitsCount; ++j)
+          {
+            TestEntry[] digitsEntries = testEntries.Where(item => item.digitsCount == j).ToArray();
+            BigInteger[] numbers = digitsEntries.Select(item => (BigInteger) item.n).ToArray();
+            long[] ticks = digitsEntries.Select(item => item.ticks).ToArray();
+            BigInteger medianNumber = numbers.Median();
+            long medianTick = ticks.Median();
+            lines.Add($"{medianNumber};{((double) medianTick / Stopwatch.Frequency).ToPlain()}");
+          }
+          File.WriteAllLines(@"C:\Usr\" + test + ".txt", lines);
+        }
+      }
+    }
+    else
+    {
+      FactorBaseExperiments();
+    }
+  }
+
+  private static void PerformPQTests(int digitsCount, BigInt p, BigInt q, ref TestResults? testResults)
+  {
+    BigInt n = p * q;
+    foreach (Tests test in Tests)
+    {
+      Stopwatch watch = new();
+      Console.WriteLine($"--------- {test}");
+      watch.Start();
+      BigInt result;
+      BigInt iterations;
+      long ticks;
+      try
+      {
+        result = PerformTestForPQ(p, q, test, out iterations);
+      }
+      finally
+      {
+        ticks = watch.ElapsedTicks;
+      }
+      if (1 < result && result < n)
+      {
+        Console.WriteLine($"{result} x {n / result}");
+        Console.WriteLine($"Iterations: {iterations}");
+        Console.WriteLine($"Duration: {Math.Round((double) ticks / Stopwatch.Frequency, 3)} s");
+        testResults?.Add(new TestEntry(digitsCount, n, test, iterations, ticks));
+      }
+    }
+  }
+
+  private static BigInt PerformTestForPQ(BigInt p, BigInt q, Tests test, out BigInt iterations)
+  {
+    BigInt n = p * q;
+    iterations = 0;
+    return test switch
+    {
+      Factorization.Tests.CFRAC => CFRAC.Factorize(n),
+      Factorization.Tests.PollardPm1PowerMod => n.PollardPm1PowMod(out iterations),
+      Factorization.Tests.PollardPm1Reference => n.PollardPm1Reference(),
+      Factorization.Tests.PollardPm1Rho => n.PollardPm1Rho(out iterations),
+      Factorization.Tests.PollardPm1SelfReferential => n.PollardPm1SelfReferential(out iterations),
+      Factorization.Tests.PollardPm1Standard => n.PollardPm1Standard(out iterations),
+      Factorization.Tests.PollardPm1TopBottom => n.PollardPm1TopBottom(out iterations),
+      Factorization.Tests.PollardPm1WithMultipleFoldings => n.PollardPm1WithMultipleFoldings(out iterations),
+      Factorization.Tests.PollardPm1WithOneFoldingAndLimits => n.PollardPm1WithOneFoldingAndLimits(out iterations),
+      Factorization.Tests.PollardRho => n.PollardRho(new SquarePlusC(2, 1, n), out iterations),
+      Factorization.Tests.PollardRhoChebyshev => n.PollardRhoChebyshev(out iterations),
+      Factorization.Tests.PollardRhoCombined => n.PollardRhoCombined(),
+      Factorization.Tests.PollardRhoPowerMod => n.PollardRhoPowerMod(out iterations),
+      Factorization.Tests.ShanksSqufof => n.ShanksSqufof(),
+      Factorization.Tests.WilliamsPp1 => n.WilliamsPPlus1(),
+      _ => 1
+    };
+  }
+
+  private static bool PerformFactorizations => false;
+
+  private static bool PerformTests => false;
 }
