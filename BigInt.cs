@@ -9,7 +9,7 @@ namespace Factorization;
 ///   Bietet umfassende arithmetische, bitweise und modulare Operationen für beliebig große Ganzzahlen,
 ///   sowie spezialisierte Funktionen für Zahlentheorie und Faktorisierungsalgorithmen.
 /// </summary>
-internal readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<BigInt>, IFormattable
+public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<BigInt>, IFormattable
 {
   public class PowModState(BigInt p, BigInt e, BigInt n, Action<PowModState>? resetAction)
   {
