@@ -385,128 +385,111 @@ internal readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<B
     throw new InvalidOperationException($"Could not find primitive root for p={p} after {maxAttempts} attempts");
   }
 
-  public static BigInt FindRootOfSquareFromFactorBase(
+  public static BigInt FindSquareRootFromRelations(
     List<int[]> exponentVectors,
     List<BigInt> factorBase,
-    out List<int> usedIndices, BigInt n)
+    BigInt modulus,
+    out List<int> relationIndicesUsed)
   {
-    int m = exponentVectors.Count;
-    int k = factorBase.Count;
-
-    // Paritätsmatrix
-    bool[][] mat = new bool[m][];
-    // vollständige Exponentensummen
-    long[][] expSum = new long[m][];
-    // Historie der XOR-Kombinationen
-    bool[][] comb = new bool[m][];
-    for (int i = 0; i < m; i++)
+    int relationCount = exponentVectors.Count;
+    int factorCount = factorBase.Count;
+    bool[][] parityMatrix = new bool[relationCount][];
+    bool[][] combinationMatrix = new bool[relationCount][];
+    for (int relationIndex = 0; relationIndex < relationCount; relationIndex++)
     {
-      mat[i] = new bool[k];
-      expSum[i] = new long[k];
-      comb[i] = new bool[m];
-      comb[i][i] = true;
-      for (int j = 0; j < k; j++)
+      parityMatrix[relationIndex] = new bool[factorCount];
+      combinationMatrix[relationIndex] = new bool[relationCount];
+      combinationMatrix[relationIndex][relationIndex] = true;
+      for (int factorIndex = 0; factorIndex < factorCount; factorIndex++)
       {
-        int e = exponentVectors[i][j];
-        mat[i][j] = (e & 1) == 1;
-        expSum[i][j] = e;
+        int exponent = exponentVectors[relationIndex][factorIndex];
+        parityMatrix[relationIndex][factorIndex] = exponent % 2 != 0;
       }
     }
-    int rank = 0;
-    for (int col = 0; col < k && rank < m; col++)
+    int pivotRow = 0;
+    for (int column = 0; column < factorCount && pivotRow < relationCount; column++)
     {
-      // Pivot suchen
-      int pivot = -1;
-      for (int row = rank; row < m; row++)
+      int foundPivotRow = -1;
+      for (int row = pivotRow; row < relationCount; row++)
       {
-        if (mat[row][col])
+        if (parityMatrix[row][column])
         {
-          pivot = row;
+          foundPivotRow = row;
           break;
         }
       }
-      if (pivot == -1)
+      if (foundPivotRow == -1)
+      {
         continue;
-
-      // Zeilentausch
-      if (pivot != rank)
-      {
-        (mat[pivot], mat[rank]) = (mat[rank], mat[pivot]);
-        (expSum[pivot], expSum[rank]) = (expSum[rank], expSum[pivot]);
-        (comb[pivot], comb[rank]) = (comb[rank], comb[pivot]);
       }
-
-      // Eliminieren unterhalb
-      for (int row = 0; row < m; row++)
+      if (foundPivotRow != pivotRow)
       {
-        if (row == rank)
-          continue;
-        if (mat[row][col])
+        (parityMatrix[pivotRow], parityMatrix[foundPivotRow]) = (parityMatrix[foundPivotRow], parityMatrix[pivotRow]);
+        (combinationMatrix[pivotRow], combinationMatrix[foundPivotRow]) = (combinationMatrix[foundPivotRow], combinationMatrix[pivotRow]);
+      }
+      for (int row = pivotRow + 1; row < relationCount; row++)
+      {
+        if (parityMatrix[row][column])
         {
-          // Parität XOR
-          for (int c = col; c < k; c++)
-            mat[row][c] ^= mat[rank][c];
-
-          // vollständige Exponentensummen addieren
-          for (int c = 0; c < k; c++)
-            expSum[row][c] += expSum[rank][c];
-
-          // Kombinationsvektor XOR
-          for (int c = 0; c < m; c++)
-            comb[row][c] ^= comb[rank][c];
+          for (int col = 0; col < factorCount; col++)
+          {
+            parityMatrix[row][col] ^= parityMatrix[pivotRow][col];
+          }
+          for (int col = 0; col < relationCount; col++)
+          {
+            combinationMatrix[row][col] ^= combinationMatrix[pivotRow][col];
+          }
         }
       }
-      rank++;
+      pivotRow++;
     }
-
-    // Suche echte Nullzeile (lineare Abhängigkeit)
-    for (int row = 0; row < m; row++)
+    for (int row = pivotRow; row < relationCount; row++)
     {
-      bool isZero = true;
-      for (int c = 0; c < k; c++)
+      bool isZeroRow = true;
+      for (int col = 0; col < factorCount; col++)
       {
-        if (mat[row][c])
+        if (parityMatrix[row][col])
         {
-          isZero = false;
+          isZeroRow = false;
           break;
         }
       }
-      if (!isZero)
-        continue;
-
-      // triviale Zeile ausschließen
-      bool nonTrivial = false;
-      for (int i = 0; i < m; i++)
+      if (!isZeroRow)
       {
-        if (comb[row][i])
+        continue;
+      }
+      relationIndicesUsed = new List<int>();
+      for (int i = 0; i < relationCount; i++)
+      {
+        if (combinationMatrix[row][i])
         {
-          nonTrivial = true;
-          break;
+          relationIndicesUsed.Add(i);
         }
       }
-      if (!nonTrivial)
-        continue;
-
-      // Quadrat konstruieren
-      BigInt result = One;
-      for (int j = 0; j < k; j++)
+      long[] totalExponents = new long[factorCount];
+      foreach (int index in relationIndicesUsed)
       {
-        if (expSum[row][j] != 0)
+        for (int factorIndex = 0; factorIndex < factorCount; factorIndex++)
         {
-          // product *= Pow(factorBase[j], (int) expSum[row][j]);
-          result = result.MulMod(factorBase[j].PowerMod(expSum[row][j] / 2, n), n);
+          totalExponents[factorIndex] += exponentVectors[index][factorIndex];
         }
       }
-      usedIndices = new List<int>();
-      for (int i = 0; i < m; i++)
-        if (comb[row][i])
-          usedIndices.Add(i);
-      return result;
+      BigInt y = One;
+      for (int factorIndex = 0; factorIndex < factorCount; factorIndex++)
+      {
+        long halfExponent = totalExponents[factorIndex] / 2;
+        if (halfExponent > 0)
+        {
+          y = y.MulMod(
+            factorBase[factorIndex].PowerMod(halfExponent, modulus),
+            modulus);
+        }
+      }
+      return y;
     }
-    usedIndices = new List<int>();
+    relationIndicesUsed = new List<int>();
     return MinusOne;
   }
-
   // ====================================================================
   // PRIMZAHLEN UND ZUFALLSZAHLEN
   // ====================================================================

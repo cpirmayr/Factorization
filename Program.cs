@@ -28,44 +28,39 @@ internal class Program
     Random random = new();
     BigInt n = BigInt.GenerateSemiPrime(MinDigitsCount, out BigInt _, out BigInt _, random.Next());
     Console.WriteLine($"n: {n}");
-    BigInt primesLimit = n.Root(8);
+    BigInt primesLimit = n.Root(6);
     List<BigInt> primes = Enumerable.Range(2, (int) primesLimit).Where(static item => BigInt.IsProbablePrime(item)).Select(static item => (BigInt) item).ToList();
+    List<BigInt> pValues = [];
+    List<BigInt> dValues = [];
     List<int[]> relations = [];
-    HashSet<BigInt> usedPrimes = [];
     foreach ((BigInt p, BigInt q) in SqrtContinuedFraction.ConvergentsOfSqrt(n, int.MaxValue))
     {
       BigInt d = BigInt.Abs(p * p - n * q * q); // 2744102684715;
       int[] relation = Enumerable.Repeat(0, primes.Count).ToArray();
-      List<BigInteger> factors = [];
-      // foreach (int prime in primes)
       for (int primesIndex = 0; primesIndex < primes.Count; ++primesIndex)
       {
         BigInteger prime = primes[primesIndex];
-        bool factorUsed = false;
-        BigInt newD = BigInt.DivRem(d, prime, out BigInt remainder);
+        BigInt newDCandidate = BigInt.DivRem(d, prime, out BigInt remainder);
         while (remainder == 0)
         {
           relation[primesIndex]++;
-          usedPrimes.Add(prime);
-          d = newD;
-          newD = BigInt.DivRem(d, prime, out remainder);
-          factorUsed = true;
-        }
-        if (factorUsed)
-        {
-          factors.Add(prime);
+          d = newDCandidate;
+          newDCandidate = BigInt.DivRem(d, prime, out remainder);
         }
       }
       if (d == 1)
       {
+        pValues.Add(p % n);
         relations.Add(relation);
       }
-      if (1 < relations.Count && usedPrimes.Count < relations.Count && relations.Count % 20 == 0)
+      BigInt check = BigInt.One;
+      Console.WriteLine(check == BigInt.Abs(p * p - n * q * q));
+      if (relations.Count > primes.Count)
       {
-        BigInt square = BigInt.FindRootOfSquareFromFactorBase(relations, primes, out List<int> usedIndices, n);
-        if (1 < square)
+        BigInt rootOfSquare = BigInt.FindSquareRootFromRelations(relations, primes, n, out List<int> usedIndices);
+        if (1 < rootOfSquare)
         {
-          Console.WriteLine($"Square: {square}");
+          Console.WriteLine($"RootOfSquare: {rootOfSquare}");
           return;
         }
       }
