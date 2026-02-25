@@ -385,56 +385,208 @@ internal readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<B
     throw new InvalidOperationException($"Could not find primitive root for p={p} after {maxAttempts} attempts");
   }
 
-  public static BigInt FindSquareRootFromRelations(
-    List<int[]> exponentVectors,
-    List<BigInt> factorBase,
-    BigInt modulus,
-    out List<int> relationIndicesUsed)
+  /// <summary>
+  ///   Findet eine Quadratwurzel aus gesammelten Relationen mittels Gauß-Elimination über F₂.
+  ///   Implementiert den Kern des Quadratisches-Sieb (Quadratic Sieve) und CFRAC-Algorithmen.
+  /// </summary>
+  /// <remarks>
+  ///   <para>
+  ///     Diese Methode löst das folgende Problem:
+  ///     Gegeben seien Zahlen d₁, d₂, ..., dₖ mit bekannten Faktorisierungen über einer Faktorbasis.
+  ///     Gesucht ist eine Teilmenge dieser Zahlen, deren Produkt ein perfektes Quadrat ist.
+  ///   </para>
+  ///   <para>
+  ///     Der Algorithmus funktioniert in zwei Phasen:
+  ///     <list type="number">
+  ///       <item>
+  ///         <description>
+  ///           <strong>Gauß-Elimination über F₂ (Körper mit 2 Elementen):</strong>
+  ///           Die Exponenten der Faktorisierungen werden modulo 2 reduziert (Parität).
+  ///           Eine Zeile mit lauter Nullen bedeutet, dass das Produkt der zugehörigen d_i
+  ///           ein perfektes Quadrat ist (alle Exponenten sind gerade).
+  ///         </description>
+  ///       </item>
+  ///       <item>
+  ///         <description>
+  ///           <strong>Rekonstruktion der Quadratwurzel:</strong>
+  ///           Aus den Originalexponenten der beteiligten Relationen wird die Summe berechnet,
+  ///           durch 2 geteilt und dann die modulare Quadratwurzel gebildet.
+  ///         </description>
+  ///       </item>
+  ///     </list>
+  ///   </para>
+  ///   <para>
+  ///     <strong>Komplexität:</strong>
+  ///     <list type="bullet">
+  ///       <item><description>Zeit: O(relationCount × factorCount²) für Gauß-Elimination</description></item>
+  ///       <item><description>Speicher: O(relationCount × factorCount) für die Matrizen</description></item>
+  ///     </list>
+  ///   </para>
+  ///   <para>
+  ///     <strong>Mathematischer Hintergrund:</strong>
+  ///     Wenn d₁, d₂, ..., dₘ Zahlen mit Faktorisierungen d_i = ∏ p_j^(e_{i,j}) sind,
+  ///     und es existiert eine Menge S ⊆ {1,...,m} mit ∑_{i∈S} e_{i,j} ≡ 0 (mod 2) für alle j,
+  ///     dann ist y² = ∏_{i∈S} d_i ein perfektes Quadrat und y ist die gesuchte Quadratwurzel.
+  ///   </para>
+  /// </remarks>
+  /// <param name="exponentVectors">
+  ///   Liste der Exponentenvektoren. exponentVectors[i] ist ein Array der Länge |factorBase|,
+  ///   wobei exponentVectors[i][j] der Exponent von factorBase[j] in der Faktorisierung
+  ///   der i-ten Relation darstellt.
+  ///   <para>Bedingungen:</para>
+  ///   <list type="bullet">
+  ///     <item><description>Länge muss > 0 sein</description></item>
+  ///     <item><description>Alle Exponenten müssen ≥ 0 sein</description></item>
+  ///     <item><description>Idealerweise sollte relationCount ≥ factorCount + 1 sein (für Überbestimmung)</description></item>
+  ///   </list>
+  /// </param>
+  /// <param name="factorBase">
+  ///   Die Faktorbasis, bestehend aus Primzahlen oder kleinen zusammengesetzten Zahlen.
+  ///   <para>Bedingungen:</para>
+  ///   <list type="bullet">
+  ///     <item><description>Länge muss > 0 sein</description></item>
+  ///     <item><description>Alle Einträge müssen > 1 sein</description></item>
+  ///     <item><description>Üblicherweise aufsteigend sortiert</description></item>
+  ///   </list>
+  /// </param>
+  /// <param name="modulus">
+  ///   Der Modulus n (die zu faktorisierende Zahl oder ein verwandter Wert).
+  ///   Wird verwendet für die modulare arithmetische Berechnung der finalen Quadratwurzel.
+  ///   <para>Bedingungen:</para>
+  ///   <list type="bullet">
+  ///     <item><description>Muss > 1 sein</description></item>
+  ///   </list>
+  /// </param>
+  /// <param name="relationIndicesUsed">
+  ///   Ausgabeparameter: Liste der Indizes der Relationen, die zur Bildung der Nullzeile
+  ///   kombiniert wurden (XOR-Operationen über F₂).
+  ///   <para>
+  ///     Falls eine Nullzeile gefunden wird, enthält diese Liste die Indizes i aller Relationen,
+  ///     deren Kombination das perfekte Quadrat bildet.
+  ///     Falls keine Abhängigkeit gefunden wird, bleibt die Liste leer.
+  ///   </para>
+  /// </param>
+  /// <returns>
+  ///   <para>
+  ///     Wenn eine Nullzeile gefunden wird:
+  ///     Gibt y zurück, wobei y² ≡ ∏_{i∈S} d_i (mod modulus) und S die beteiligten Relationen sind.
+  ///     Diese Quadratwurzel ist entscheidend für Faktorisierungsalgorithmen wie Quadratic Sieve.
+  ///   </para>
+  ///   <para>
+  ///     Wenn keine Nullzeile gefunden wird:
+  ///     Gibt -1 zurück und relationIndicesUsed ist eine leere Liste.
+  ///     Dies bedeutet, dass mehr Relationen benötigt werden.
+  ///   </para>
+  /// </returns>
+  /// <exception cref="ArgumentException">
+  ///   Wird nicht geworfen, aber die Methode erwartet gültige Eingaben.
+  ///   Ungültige Eingaben (z.B. leere Listen) führen zu unerwartetem Verhalten.
+  /// </exception>
+  /// <example>
+  ///   <code>
+  ///     // Beispiel: Faktorbasis {2, 3, 5} und drei Relationen
+  ///     List&lt;int[]&gt; exponentVectors = new()
+  ///     {
+  ///       new[] { 2, 1, 0 },  // d₁ = 2² × 3 = 12
+  ///       new[] { 1, 0, 2 },  // d₂ = 2 × 5² = 50
+  ///       new[] { 1, 1, 2 }   // d₃ = 2 × 3 × 5² = 150
+  ///     };
+  ///     List&lt;BigInt&gt; factorBase = new() { 2, 3, 5 };
+  ///     BigInt modulus = 221; // Beispiel-Modulus
+  ///
+  ///     BigInt y = FindSquareRootFromRelations(
+  ///       exponentVectors, factorBase, modulus, out List&lt;int&gt; used);
+  ///
+  ///     if (y != MinusOne)
+  ///     {
+  ///       // Gefunden: y ist die Quadratwurzel
+  ///       // used enthält die beteiligten Relationsindizes
+  ///     }
+  ///   </code>
+  /// </example>
+  public static BigInt FindSquareRootFromRelations
+  (
+    List<int[]> exponentVectors, // Exponenten der d_i über der Faktorbasis
+    List<BigInt> factorBase, // Faktorbasis (Primzahlen)
+    BigInt modulus, // n
+    out List<int> relationIndicesUsed
+  )
   {
-    int relationCount = exponentVectors.Count;
-    int factorCount = factorBase.Count;
+    int relationCount = exponentVectors.Count; // Anzahl gesammelter Relationen
+    int factorCount = factorBase.Count; // Größe der Faktorbasis
+    /*
+    parityMatrix:
+    Enthält die Exponenten nur modulo 2.
+    Diese Matrix wird für die lineare Algebra über F2 verwendet.
+    */
     bool[][] parityMatrix = new bool[relationCount][];
+    /*
+    combinationMatrix:
+    combinationMatrix[i] beschreibt, welche ursprünglichen Relationen
+    zur aktuellen Zeile i kombiniert wurden.
+    Anfangs ist jede Zeile nur sich selbst (Einheitsmatrix).
+    */
     bool[][] combinationMatrix = new bool[relationCount][];
+
+    // Initialisierung
     for (int relationIndex = 0; relationIndex < relationCount; relationIndex++)
     {
       parityMatrix[relationIndex] = new bool[factorCount];
       combinationMatrix[relationIndex] = new bool[relationCount];
+
+      // Anfangszustand: jede Zeile ist ihre eigene Kombination
       combinationMatrix[relationIndex][relationIndex] = true;
+
+      // Parität der Exponenten bestimmen
       for (int factorIndex = 0; factorIndex < factorCount; factorIndex++)
       {
         int exponent = exponentVectors[relationIndex][factorIndex];
         parityMatrix[relationIndex][factorIndex] = exponent % 2 != 0;
       }
     }
+    /*
+    Gauß-Elimination über F2
+    Ziel:
+    Eine Zeile erzeugen, deren Paritätsvektor Null ist.
+    Diese entspricht einer linearen Abhängigkeit.
+    */
     int pivotRow = 0;
     for (int column = 0; column < factorCount && pivotRow < relationCount; column++)
     {
-      int foundPivotRow = -1;
+      // Pivot in aktueller Spalte suchen
+      int pivotFoundAt = -1;
       for (int row = pivotRow; row < relationCount; row++)
       {
         if (parityMatrix[row][column])
         {
-          foundPivotRow = row;
+          pivotFoundAt = row;
           break;
         }
       }
-      if (foundPivotRow == -1)
+      if (pivotFoundAt == -1)
       {
-        continue;
+        continue; // keine 1 in dieser Spalte → nächste Spalte
       }
-      if (foundPivotRow != pivotRow)
+
+      // Falls nötig, Pivot-Zeile nach oben tauschen
+      if (pivotFoundAt != pivotRow)
       {
-        (parityMatrix[pivotRow], parityMatrix[foundPivotRow]) = (parityMatrix[foundPivotRow], parityMatrix[pivotRow]);
-        (combinationMatrix[pivotRow], combinationMatrix[foundPivotRow]) = (combinationMatrix[foundPivotRow], combinationMatrix[pivotRow]);
+        (parityMatrix[pivotRow], parityMatrix[pivotFoundAt]) = (parityMatrix[pivotFoundAt], parityMatrix[pivotRow]);
+        (combinationMatrix[pivotRow], combinationMatrix[pivotFoundAt]) = (combinationMatrix[pivotFoundAt], combinationMatrix[pivotRow]);
       }
+
+      // Alle Zeilen unterhalb des Pivots eliminieren
       for (int row = pivotRow + 1; row < relationCount; row++)
       {
         if (parityMatrix[row][column])
         {
+          // Paritätszeile XOR mit Pivotzeile
           for (int col = 0; col < factorCount; col++)
           {
             parityMatrix[row][col] ^= parityMatrix[pivotRow][col];
           }
+
+          // Gleiche Operation auf Kombination anwenden
           for (int col = 0; col < relationCount; col++)
           {
             combinationMatrix[row][col] ^= combinationMatrix[pivotRow][col];
@@ -443,6 +595,12 @@ internal readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<B
       }
       pivotRow++;
     }
+    /*
+    Nullzeile suchen.
+    Eine Nullzeile bedeutet:
+    Die Parität aller Exponenten ist 0.
+    Also ist das Produkt der zugehörigen d_i ein perfektes Quadrat.
+    */
     for (int row = pivotRow; row < relationCount; row++)
     {
       bool isZeroRow = true;
@@ -458,6 +616,8 @@ internal readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<B
       {
         continue;
       }
+
+      // Bestimmen, welche Relationen beteiligt sind
       relationIndicesUsed = new List<int>();
       for (int i = 0; i < relationCount; i++)
       {
@@ -466,31 +626,40 @@ internal readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<B
           relationIndicesUsed.Add(i);
         }
       }
+      /*
+      Jetzt rekonstruieren wir die vollständigen Exponentensummen
+      aus den ORIGINALEN Exponenten.
+      */
       long[] totalExponents = new long[factorCount];
-      foreach (int index in relationIndicesUsed)
+      foreach (int relationIndex in relationIndicesUsed)
       {
         for (int factorIndex = 0; factorIndex < factorCount; factorIndex++)
         {
-          totalExponents[factorIndex] += exponentVectors[index][factorIndex];
+          totalExponents[factorIndex] += exponentVectors[relationIndex][factorIndex];
         }
       }
+      /*
+      Da die Parität Null ist, sind alle totalExponents gerade.
+      Also kann man durch 2 teilen und die Quadratwurzel bilden.
+      */
       BigInt y = One;
       for (int factorIndex = 0; factorIndex < factorCount; factorIndex++)
       {
         long halfExponent = totalExponents[factorIndex] / 2;
         if (halfExponent > 0)
         {
-          y = y.MulMod(
-            factorBase[factorIndex].PowerMod(halfExponent, modulus),
-            modulus);
+          y = y.MulMod(factorBase[factorIndex].PowerMod(halfExponent, modulus), modulus);
         }
       }
       return y;
     }
+
+    // Keine Abhängigkeit gefunden
     relationIndicesUsed = new List<int>();
     return MinusOne;
   }
-  // ====================================================================
+
+// ====================================================================
   // PRIMZAHLEN UND ZUFALLSZAHLEN
   // ====================================================================
 

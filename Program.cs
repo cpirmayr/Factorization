@@ -26,16 +26,15 @@ internal class Program
   private static void FactorBaseExperiments()
   {
     Random random = new();
-    BigInt n = BigInt.GenerateSemiPrime(MinDigitsCount, out BigInt _, out BigInt _, random.Next());
+    BigInt n = BigInt.GenerateSemiPrime(MinDigitsCount, out BigInt p1, out BigInt p2, random.Next());
     Console.WriteLine($"n: {n}");
     BigInt primesLimit = n.Root(6);
     List<BigInt> primes = Enumerable.Range(2, (int) primesLimit).Where(static item => BigInt.IsProbablePrime(item)).Select(static item => (BigInt) item).ToList();
     List<BigInt> pValues = [];
-    List<BigInt> dValues = [];
     List<int[]> relations = [];
     foreach ((BigInt p, BigInt q) in SqrtContinuedFraction.ConvergentsOfSqrt(n, int.MaxValue))
     {
-      BigInt d = BigInt.Abs(p * p - n * q * q); // 2744102684715;
+      BigInt d = BigInt.Abs(p * p - n * q * q);
       int[] relation = Enumerable.Repeat(0, primes.Count).ToArray();
       for (int primesIndex = 0; primesIndex < primes.Count; ++primesIndex)
       {
@@ -53,17 +52,19 @@ internal class Program
         pValues.Add(p % n);
         relations.Add(relation);
       }
-      BigInt check = BigInt.One;
-      Console.WriteLine(check == BigInt.Abs(p * p - n * q * q));
-      if (relations.Count > primes.Count)
+      if (primes.Count / 2 < relations.Count)
       {
-        BigInt rootOfSquare = BigInt.FindSquareRootFromRelations(relations, primes, n, out List<int> usedIndices);
-        if (1 < rootOfSquare)
-        {
-          Console.WriteLine($"RootOfSquare: {rootOfSquare}");
-          return;
-        }
+        break;
       }
+    }
+    BigInt y = BigInt.FindSquareRootFromRelations(relations, primes, n, out List<int> usedIndices);
+    if (1 < y)
+    {
+      BigInt x = usedIndices.Aggregate<int, BigInt>(1, (current, t) => current.MulMod(pValues[t], n));
+      BigInt xSquared = x.PowerMod(2, n);
+      BigInt ySquared = y.PowerMod(2, n);
+      BigInt gcd = BigInt.GreatestCommonDivisor(x + y, n);
+      Console.WriteLine($"x: {x}\ny: {y}\nx^2: {xSquared}\ny^2: {ySquared}\np1: {p1}\np2: {p2}\ngcd: {gcd}");
     }
   }
 
