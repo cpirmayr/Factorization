@@ -1,4 +1,6 @@
-﻿using System.Globalization;
+﻿#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
+using System.Globalization;
 using System.Numerics;
 using System.Security.Cryptography;
 
@@ -9,8 +11,108 @@ namespace Factorization;
 ///   Bietet umfassende arithmetische, bitweise und modulare Operationen für beliebig große Ganzzahlen,
 ///   sowie spezialisierte Funktionen für Zahlentheorie und Faktorisierungsalgorithmen.
 /// </summary>
-public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<BigInt>, IFormattable
+public readonly struct BigInt :
+  IComparable,
+  IComparable<BigInt>,
+  IEquatable<BigInt>,
+  IFormattable,
+  ISpanFormattable,
+  ISpanParsable<BigInt>,
+  INumber<BigInt>,
+  ISignedNumber<BigInt>
 {
+  // --- Checked-Varianten für INumberBase (optional, aber empfohlen) ---
+
+  /// <summary>Explizite checked Konvertierung zu float.</summary>
+  public static explicit operator checked float(BigInt value)
+  {
+    return checked((float) (double) value.value);
+  }
+
+  /// <summary>Explizite checked Konvertierung zu Half.</summary>
+  public static explicit operator checked Half(BigInt value)
+  {
+    return (Half) (double) value.value;
+  }
+
+  /// <summary>Explizite checked Konvertierung zu char.</summary>
+  public static explicit operator checked char(BigInt value)
+  {
+    return checked((char) (uint) value.value);
+  }
+
+  /// <summary>Explizite checked Konvertierung zu byte.</summary>
+  public static explicit operator checked byte(BigInt value)
+  {
+    return checked((byte) value.value);
+  }
+
+  /// <summary>Explizite checked Konvertierung zu sbyte.</summary>
+  public static explicit operator checked sbyte(BigInt value)
+  {
+    return checked((sbyte) value.value);
+  }
+
+  /// <summary>Explizite checked Konvertierung zu short.</summary>
+  public static explicit operator checked short(BigInt value)
+  {
+    return checked((short) value.value);
+  }
+
+  /// <summary>Explizite checked Konvertierung zu ushort.</summary>
+  public static explicit operator checked ushort(BigInt value)
+  {
+    return checked((ushort) value.value);
+  }
+
+  /// <summary>Explizite checked Konvertierung zu int.</summary>
+  public static explicit operator checked int(BigInt value)
+  {
+    return checked((int) value.value);
+  }
+
+  /// <summary>Explizite checked Konvertierung zu uint.</summary>
+  public static explicit operator checked uint(BigInt value)
+  {
+    return checked((uint) value.value);
+  }
+
+  /// <summary>Explizite checked Konvertierung zu long.</summary>
+  public static explicit operator checked long(BigInt value)
+  {
+    return checked((long) value.value);
+  }
+
+  /// <summary>Explizite checked Konvertierung zu ulong.</summary>
+  public static explicit operator checked ulong(BigInt value)
+  {
+    return checked((ulong) value.value);
+  }
+
+  /// <summary>Explizite checked Konvertierung zu Int128.</summary>
+  public static explicit operator checked Int128(BigInt value)
+  {
+    return checked((Int128) value.value);
+  }
+
+  /// <summary>Explizite checked Konvertierung zu UInt128.</summary>
+  public static explicit operator checked UInt128(BigInt value)
+  {
+    return checked((UInt128) value.value);
+  }
+
+  /// <summary>Explizite checked Konvertierung zu nint.</summary>
+  public static explicit operator checked nint(BigInt value)
+  {
+    return checked((nint) (long) value.value);
+  }
+
+  /// <summary>Explizite checked Konvertierung zu nuint.</summary>
+  public static explicit operator checked nuint(BigInt value)
+  {
+    return checked((nuint) (ulong) value.value);
+  }
+
   public class PowModState(BigInt p, BigInt e, BigInt n, Action<PowModState>? resetAction)
   {
     public BigInt b = p;
@@ -18,6 +120,9 @@ public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<Big
     public BigInt n = n;
     public BigInt r = 1;
 
+    /// <summary>
+    /// </summary>
+    /// <returns></returns>
     public bool Step()
     {
       if (!e.IsEven)
@@ -235,6 +340,95 @@ public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<Big
     }
   }
 
+  // --- INumberBase: Konvertierungsmethoden ---
+
+  /// <summary>Erstellt einen BigInt aus einem anderen numerischen Typ (checked).</summary>
+  public static BigInt CreateChecked<TOther>(TOther value) where TOther : INumberBase<TOther>
+  {
+    if (typeof(TOther) == typeof(BigInt)) return (BigInt) (object) value;
+    if (typeof(TOther) == typeof(BigInteger)) return new BigInt((BigInteger) (object) value);
+    if (typeof(TOther) == typeof(byte)) return new BigInt((byte) (object) value);
+    if (typeof(TOther) == typeof(sbyte)) return new BigInt((sbyte) (object) value);
+    if (typeof(TOther) == typeof(short)) return new BigInt((short) (object) value);
+    if (typeof(TOther) == typeof(ushort)) return new BigInt((ushort) (object) value);
+    if (typeof(TOther) == typeof(int)) return new BigInt((int) (object) value);
+    if (typeof(TOther) == typeof(uint)) return new BigInt((uint) (object) value);
+    if (typeof(TOther) == typeof(long)) return new BigInt((long) (object) value);
+    if (typeof(TOther) == typeof(ulong)) return new BigInt((ulong) (object) value);
+    if (typeof(TOther) == typeof(Int128)) return new BigInt((Int128) (object) value);
+    if (typeof(TOther) == typeof(UInt128)) return new BigInt((UInt128) (object) value);
+    if (typeof(TOther) == typeof(float)) return new BigInt(checked((decimal) (float) (object) value));
+    if (typeof(TOther) == typeof(double)) return new BigInt(checked((double) (object) value));
+    if (typeof(TOther) == typeof(decimal)) return new BigInt((decimal) (object) value);
+    if (typeof(TOther) == typeof(Half))
+    {
+      double d = (double) (Half) (object) value;
+      if (double.IsInfinity(d) || double.IsNaN(d)) throw new OverflowException();
+      return new BigInt(checked((long) d));
+    }
+    if (typeof(TOther) == typeof(char)) return new BigInt((char) (object) value);
+    if (typeof(TOther) == typeof(nint)) return new BigInt((nint) (object) value);
+    if (typeof(TOther) == typeof(nuint)) return new BigInt((nuint) (object) value);
+    throw new NotSupportedException($"Conversion from {typeof(TOther)} to BigInt is not supported.");
+  }
+
+  /// <summary>Erstellt einen BigInt aus einem anderen numerischen Typ (saturating).</summary>
+  public static BigInt CreateSaturating<TOther>(TOther value) where TOther : INumberBase<TOther>
+  {
+    // BigInt hat keine Grenzen → identisch mit CreateChecked für Ganzzahlen
+    if (typeof(TOther) == typeof(float))
+    {
+      float f = (float) (object) value;
+      if (float.IsNaN(f)) return Zero;
+      if (float.IsInfinity(f)) return float.IsPositiveInfinity(f) ? new BigInt(long.MaxValue) : new BigInt(long.MinValue);
+    }
+    if (typeof(TOther) == typeof(double))
+    {
+      double d = (double) (object) value;
+      if (double.IsNaN(d)) return Zero;
+      if (double.IsInfinity(d)) return double.IsPositiveInfinity(d) ? new BigInt(long.MaxValue) : new BigInt(long.MinValue);
+    }
+    try
+    {
+      return CreateChecked(value);
+    }
+    catch (OverflowException)
+    {
+      return Zero;
+    }
+  }
+
+  /// <summary>Erstellt einen BigInt aus einem anderen numerischen Typ (truncating).</summary>
+  public static BigInt CreateTruncating<TOther>(TOther value) where TOther : INumberBase<TOther>
+  {
+    if (typeof(TOther) == typeof(float))
+    {
+      float f = (float) (object) value;
+      if (float.IsNaN(f) || float.IsInfinity(f)) return Zero;
+      return new BigInt(new BigInteger((double) f));
+    }
+    if (typeof(TOther) == typeof(double))
+    {
+      double d = (double) (object) value;
+      if (double.IsNaN(d) || double.IsInfinity(d)) return Zero;
+      return new BigInt(new BigInteger(d));
+    }
+    if (typeof(TOther) == typeof(Half))
+    {
+      double d = (double) (Half) (object) value;
+      if (double.IsNaN(d) || double.IsInfinity(d)) return Zero;
+      return new BigInt(new BigInteger(d));
+    }
+    try
+    {
+      return CreateChecked(value);
+    }
+    catch
+    {
+      return Zero;
+    }
+  }
+
   /// <summary>Dividiert zwei Werte.</summary>
   public static BigInt Divide(BigInt dividend, BigInt divisor)
   {
@@ -418,8 +612,12 @@ public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<Big
   ///   <para>
   ///     <strong>Komplexität:</strong>
   ///     <list type="bullet">
-  ///       <item><description>Zeit: O(relationCount × factorCount²) für Gauß-Elimination</description></item>
-  ///       <item><description>Speicher: O(relationCount × factorCount) für die Matrizen</description></item>
+  ///       <item>
+  ///         <description>Zeit: O(relationCount × factorCount²) für Gauß-Elimination</description>
+  ///       </item>
+  ///       <item>
+  ///         <description>Speicher: O(relationCount × factorCount) für die Matrizen</description>
+  ///       </item>
   ///     </list>
   ///   </para>
   ///   <para>
@@ -435,18 +633,30 @@ public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<Big
   ///   der i-ten Relation darstellt.
   ///   <para>Bedingungen:</para>
   ///   <list type="bullet">
-  ///     <item><description>Länge muss > 0 sein</description></item>
-  ///     <item><description>Alle Exponenten müssen ≥ 0 sein</description></item>
-  ///     <item><description>Idealerweise sollte relationCount ≥ factorCount + 1 sein (für Überbestimmung)</description></item>
+  ///     <item>
+  ///       <description>Länge muss > 0 sein</description>
+  ///     </item>
+  ///     <item>
+  ///       <description>Alle Exponenten müssen ≥ 0 sein</description>
+  ///     </item>
+  ///     <item>
+  ///       <description>Idealerweise sollte relationCount ≥ factorCount + 1 sein (für Überbestimmung)</description>
+  ///     </item>
   ///   </list>
   /// </param>
   /// <param name="factorBase">
   ///   Die Faktorbasis, bestehend aus Primzahlen oder kleinen zusammengesetzten Zahlen.
   ///   <para>Bedingungen:</para>
   ///   <list type="bullet">
-  ///     <item><description>Länge muss > 0 sein</description></item>
-  ///     <item><description>Alle Einträge müssen > 1 sein</description></item>
-  ///     <item><description>Üblicherweise aufsteigend sortiert</description></item>
+  ///     <item>
+  ///       <description>Länge muss > 0 sein</description>
+  ///     </item>
+  ///     <item>
+  ///       <description>Alle Einträge müssen > 1 sein</description>
+  ///     </item>
+  ///     <item>
+  ///       <description>Üblicherweise aufsteigend sortiert</description>
+  ///     </item>
   ///   </list>
   /// </param>
   /// <param name="modulus">
@@ -454,7 +664,9 @@ public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<Big
   ///   Wird verwendet für die modulare arithmetische Berechnung der finalen Quadratwurzel.
   ///   <para>Bedingungen:</para>
   ///   <list type="bullet">
-  ///     <item><description>Muss > 1 sein</description></item>
+  ///     <item>
+  ///       <description>Muss > 1 sein</description>
+  ///     </item>
   ///   </list>
   /// </param>
   /// <param name="relationIndicesUsed">
@@ -493,10 +705,10 @@ public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<Big
   ///     };
   ///     List&lt;BigInt&gt; factorBase = new() { 2, 3, 5 };
   ///     BigInt modulus = 221; // Beispiel-Modulus
-  ///
+  /// 
   ///     BigInt y = FindSquareRootFromRelations(
   ///       exponentVectors, factorBase, modulus, out List&lt;int&gt; used);
-  ///
+  /// 
   ///     if (y != MinusOne)
   ///     {
   ///       // Gefunden: y ist die Quadratwurzel
@@ -940,10 +1152,36 @@ public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<Big
     return left > right ? left : right;
   }
 
+  // --- INumberBase: Betragsmethoden ---
+
+  /// <summary>Gibt den Wert mit dem größeren Betrag zurück.</summary>
+  public static BigInt MaxMagnitude(BigInt x, BigInt y)
+  {
+    return Abs(x) >= Abs(y) ? x : y;
+  }
+
+  /// <summary>Gibt den Wert mit dem größeren Betrag zurück (ohne NaN-Behandlung).</summary>
+  public static BigInt MaxMagnitudeNumber(BigInt x, BigInt y)
+  {
+    return MaxMagnitude(x, y);
+  }
+
   /// <summary>Gibt den kleineren von zwei Werten zurück.</summary>
   public static BigInt Min(BigInt left, BigInt right)
   {
     return left < right ? left : right;
+  }
+
+  /// <summary>Gibt den Wert mit dem kleineren Betrag zurück.</summary>
+  public static BigInt MinMagnitude(BigInt x, BigInt y)
+  {
+    return Abs(x) <= Abs(y) ? x : y;
+  }
+
+  /// <summary>Gibt den Wert mit dem kleineren Betrag zurück (ohne NaN-Behandlung).</summary>
+  public static BigInt MinMagnitudeNumber(BigInt x, BigInt y)
+  {
+    return MinMagnitude(x, y);
   }
 
   /// <summary>
@@ -1149,6 +1387,20 @@ public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<Big
     return new BigInt(BigInteger.Parse(value, style, provider));
   }
 
+  // --- ISpanParsable / ISpanFormattable ---
+
+  /// <summary>Parst einen ReadOnlySpan&lt;char&gt; in einen BigInt.</summary>
+  public static BigInt Parse(ReadOnlySpan<char> s, IFormatProvider? provider)
+  {
+    return new BigInt(BigInteger.Parse(s, provider));
+  }
+
+  /// <summary>Parst mit NumberStyles und ReadOnlySpan&lt;char&gt;.</summary>
+  public static BigInt Parse(ReadOnlySpan<char> s, NumberStyles style = NumberStyles.Integer, IFormatProvider? provider = null)
+  {
+    return new BigInt(BigInteger.Parse(s, style, provider));
+  }
+
   /// <summary>Potenziert einen Wert.</summary>
   public static BigInt Pow(BigInt value, int exponent)
   {
@@ -1310,6 +1562,30 @@ public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<Big
     bool success = BigInteger.TryParse(value, style, provider, out BigInteger bigIntResult);
     result = new BigInt(bigIntResult);
     return success;
+  }
+
+  /// <summary>Versucht, einen ReadOnlySpan&lt;char&gt; in einen BigInt zu konvertieren.</summary>
+  public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out BigInt result)
+  {
+    bool ok = BigInteger.TryParse(s, NumberStyles.Integer, provider, out BigInteger r);
+    result = new BigInt(r);
+    return ok;
+  }
+
+  /// <summary>Versucht, einen ReadOnlySpan&lt;char&gt; mit NumberStyles zu parsen.</summary>
+  public static bool TryParse(ReadOnlySpan<char> s, NumberStyles style, IFormatProvider? provider, out BigInt result)
+  {
+    bool ok = BigInteger.TryParse(s, style, provider, out BigInteger r);
+    result = new BigInt(r);
+    return ok;
+  }
+
+  /// <summary>Versucht, einen String zu parsen (ISpanParsable-Überladung).</summary>
+  public static bool TryParse(string? s, IFormatProvider? provider, out BigInt result)
+  {
+    bool ok = BigInteger.TryParse(s, NumberStyles.Integer, provider, out BigInteger r);
+    result = new BigInt(r);
+    return ok;
   }
 
   // ====================================================================
@@ -1609,6 +1885,12 @@ public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<Big
     return count;
   }
 
+  /// <summary>Formatiert den Wert in einen Span&lt;char&gt; (ISpanFormattable).</summary>
+  public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
+  {
+    return value.TryFormat(destination, out charsWritten, format, provider);
+  }
+
   // ====================================================================
   // PRIVATE HILFSMETHODEN
   // ====================================================================
@@ -1671,6 +1953,78 @@ public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<Big
     return (value & (BigInteger.One << bitPosition)) != BigInteger.Zero;
   }
 
+  // --- INumberBase: Klassifikationsmethoden ---
+
+  /// <summary>BigInt ist immer kanonisch.</summary>
+  static bool INumberBase<BigInt>.IsCanonical(BigInt value)
+  {
+    return true;
+  }
+
+  /// <summary>BigInt hat keine komplexen Zahlen.</summary>
+  static bool INumberBase<BigInt>.IsComplexNumber(BigInt value)
+  {
+    return false;
+  }
+
+  public static bool IsEvenInteger(BigInt value)
+  {
+    throw new NotImplementedException();
+  }
+
+  /// <summary>Prüft, ob der Wert endlich ist (immer true für BigInt).</summary>
+  static bool INumberBase<BigInt>.IsFinite(BigInt value)
+  {
+    return true;
+  }
+
+  /// <summary>BigInt hat keine imaginären Anteile.</summary>
+  static bool INumberBase<BigInt>.IsImaginaryNumber(BigInt value)
+  {
+    return false;
+  }
+
+  /// <summary>BigInt kennt keine Unendlichkeit.</summary>
+  static bool INumberBase<BigInt>.IsInfinity(BigInt value)
+  {
+    return false;
+  }
+
+  /// <summary>BigInt ist immer eine ganzzahlige Zahl.</summary>
+  static bool INumberBase<BigInt>.IsInteger(BigInt value)
+  {
+    return true;
+  }
+
+  /// <summary>BigInt kennt kein NaN.</summary>
+  static bool INumberBase<BigInt>.IsNaN(BigInt value)
+  {
+    return false;
+  }
+
+  /// <summary>Prüft, ob der Wert negativ ist.</summary>
+  static bool INumberBase<BigInt>.IsNegative(BigInt value)
+  {
+    return value.Sign < 0;
+  }
+
+  /// <summary>BigInt kennt negative Unendlichkeit nicht.</summary>
+  static bool INumberBase<BigInt>.IsNegativeInfinity(BigInt value)
+  {
+    return false;
+  }
+
+  /// <summary>Alle BigInt-Werte sind "normal" (kein Subnormal-Konzept).</summary>
+  static bool INumberBase<BigInt>.IsNormal(BigInt value)
+  {
+    return !value.IsZero;
+  }
+
+  public static bool IsOddInteger(BigInt value)
+  {
+    throw new NotImplementedException();
+  }
+
   /// <summary>
   ///   Prüft, ob eine Zahl ein perfektes Quadrat ist und gibt die Wurzel zurück.
   /// </summary>
@@ -1678,6 +2032,18 @@ public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<Big
   {
     root = Sqrt(n);
     return root * root == n;
+  }
+
+  /// <summary>Prüft, ob der Wert positiv ist.</summary>
+  static bool INumberBase<BigInt>.IsPositive(BigInt value)
+  {
+    return value.Sign > 0;
+  }
+
+  /// <summary>BigInt kennt positive Unendlichkeit nicht.</summary>
+  static bool INumberBase<BigInt>.IsPositiveInfinity(BigInt value)
+  {
+    return false;
   }
 
   /// <summary>
@@ -1721,6 +2087,24 @@ public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<Big
     return true;
   }
 
+  /// <summary>BigInt ist immer eine reelle Zahl.</summary>
+  static bool INumberBase<BigInt>.IsRealNumber(BigInt value)
+  {
+    return true;
+  }
+
+  /// <summary>BigInt kennt keine Subnormalen.</summary>
+  static bool INumberBase<BigInt>.IsSubnormal(BigInt value)
+  {
+    return false;
+  }
+
+  /// <summary>Prüft, ob der Wert Null ist.</summary>
+  static bool INumberBase<BigInt>.IsZero(BigInt value)
+  {
+    return value.IsZero;
+  }
+
   /// <summary>
   ///   Berechnet value % modulus und stellt sicher, dass das Ergebnis nicht-negativ ist.
   /// </summary>
@@ -1759,6 +2143,60 @@ public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<Big
       value = new BigInt(bytes);
     } while (value > range);
     return min + value;
+  }
+
+  // --- INumberBase: TryConvert* (protected static) ---
+
+  static bool INumberBase<BigInt>.TryConvertFromChecked<TOther>(TOther value, out BigInt result)
+  {
+    try
+    {
+      result = CreateChecked(value);
+      return true;
+    }
+    catch
+    {
+      result = Zero;
+      return false;
+    }
+  }
+
+  static bool INumberBase<BigInt>.TryConvertFromSaturating<TOther>(TOther value, out BigInt result)
+  {
+    result = CreateSaturating(value);
+    return true;
+  }
+
+  static bool INumberBase<BigInt>.TryConvertFromTruncating<TOther>(TOther value, out BigInt result)
+  {
+    result = CreateTruncating(value);
+    return true;
+  }
+
+  static bool INumberBase<BigInt>.TryConvertToChecked<TOther>(BigInt value, out TOther result)
+  {
+    try
+    {
+      result = TOther.CreateChecked(value.value);
+      return true;
+    }
+    catch
+    {
+      result = default!;
+      return false;
+    }
+  }
+
+  static bool INumberBase<BigInt>.TryConvertToSaturating<TOther>(BigInt value, out TOther result)
+  {
+    result = TOther.CreateSaturating(value.value);
+    return true;
+  }
+
+  static bool INumberBase<BigInt>.TryConvertToTruncating<TOther>(BigInt value, out TOther result)
+  {
+    result = TOther.CreateTruncating(value.value);
+    return true;
   }
 
   /// <summary>
@@ -1930,6 +2368,50 @@ public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<Big
     return (double) value.value;
   }
 
+  // --- Zusätzliche explizite Casts (verlustbehaftet) ---
+
+  /// <summary>Explizite Konvertierung zu float.</summary>
+  public static explicit operator float(BigInt value)
+  {
+    return (float) value.value;
+  }
+
+  /// <summary>Explizite Konvertierung zu Half.</summary>
+  public static explicit operator Half(BigInt value)
+  {
+    return (Half) (double) value.value;
+  }
+
+  /// <summary>Explizite Konvertierung zu char.</summary>
+  public static explicit operator char(BigInt value)
+  {
+    return (char) (uint) value.value;
+  }
+
+  /// <summary>Explizite Konvertierung zu Int128.</summary>
+  public static explicit operator Int128(BigInt value)
+  {
+    return (Int128) value.value;
+  }
+
+  /// <summary>Explizite Konvertierung zu UInt128.</summary>
+  public static explicit operator UInt128(BigInt value)
+  {
+    return (UInt128) value.value;
+  }
+
+  /// <summary>Explizite Konvertierung zu nint.</summary>
+  public static explicit operator nint(BigInt value)
+  {
+    return (nint) (long) value.value;
+  }
+
+  /// <summary>Explizite Konvertierung zu nuint.</summary>
+  public static explicit operator nuint(BigInt value)
+  {
+    return (nuint) (ulong) value.value;
+  }
+
   public static bool operator >(BigInt left, BigInt right)
   {
     return left.value > right.value;
@@ -1992,6 +2474,38 @@ public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<Big
   public static implicit operator BigInteger(BigInt value)
   {
     return value.value;
+  }
+
+  // --- Zusätzliche implizite Casts (verlustfrei) ---
+
+  /// <summary>Implizite Konvertierung von char (verlustfrei über ushort).</summary>
+  public static implicit operator BigInt(char value)
+  {
+    return new BigInt((uint) value);
+  }
+
+  /// <summary>Implizite Konvertierung von Int128.</summary>
+  public static implicit operator BigInt(Int128 value)
+  {
+    return new BigInt(value);
+  }
+
+  /// <summary>Implizite Konvertierung von UInt128.</summary>
+  public static implicit operator BigInt(UInt128 value)
+  {
+    return new BigInt(value);
+  }
+
+  /// <summary>Implizite Konvertierung von nint.</summary>
+  public static implicit operator BigInt(nint value)
+  {
+    return new BigInt(value);
+  }
+
+  /// <summary>Implizite Konvertierung von nuint.</summary>
+  public static implicit operator BigInt(nuint value)
+  {
+    return new BigInt(value);
   }
 
   public static BigInt operator ++(BigInt value)
@@ -2091,4 +2605,20 @@ public readonly struct BigInt : IComparable, IComparable<BigInt>, IEquatable<Big
 
   /// <summary>Gibt das Vorzeichen zurück: -1 für negativ, 0 für null, 1 für positiv.</summary>
   public int Sign => value.Sign;
+
+  // ====================================================================
+  // INUMBER<T> / INUMBERBASE<T> INTERFACE-MEMBER
+  // ====================================================================
+
+  /// <summary>Additive Identität (0).</summary>
+  static BigInt IAdditiveIdentity<BigInt, BigInt>.AdditiveIdentity => Zero;
+
+  /// <summary>Multiplikative Identität (1).</summary>
+  static BigInt IMultiplicativeIdentity<BigInt, BigInt>.MultiplicativeIdentity => One;
+
+  /// <summary>Negatives Vorzeichen-Kennzeichen für ISignedNumber.</summary>
+  static BigInt ISignedNumber<BigInt>.NegativeOne => MinusOne;
+
+  /// <summary>Basis des Zahlensystems (2, da Binärdarstellung).</summary>
+  static int INumberBase<BigInt>.Radix => 2;
 }

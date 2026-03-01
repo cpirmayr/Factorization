@@ -3,6 +3,7 @@
 internal enum Tests
 {
   CFRAC,
+  ContinuedFractionFactorization,
   PollardRho,
   PollardRhoCombined,
   PollardRhoChebyshev,

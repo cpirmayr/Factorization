@@ -6,10 +6,9 @@ namespace Factorization;
 
 internal class Program
 {
-  public class TestEntry(int digitsCount, BigInt n, Tests test, BigInt iterations, long ticks)
+  public class TestEntry(int digitsCount, BigInt n, Tests test, long ticks)
   {
     public int digitsCount = digitsCount;
-    public BigInt iterations = iterations;
     public BigInt n = n;
     public Tests test = test;
     public long ticks = ticks;
@@ -21,97 +20,45 @@ internal class Program
   private const int MinDigitsCount = 20;
   private const int NrOfTestPasses = 1;
 
-  private static readonly List<Tests> Tests = [Factorization.Tests.CFRAC, Factorization.Tests.PollardPm1PowerMod];
-
-  private static void FactorBaseExperiments()
-  {
-    Random random = new();
-    BigInt n = BigInt.GenerateSemiPrime(MinDigitsCount, out BigInt p1, out BigInt p2, random.Next());
-    Console.WriteLine($"n: {n}");
-    BigInt primesLimit = n.Root(6);
-    List<BigInt> primes = Enumerable.Range(2, (int) primesLimit).Where(static item => BigInt.IsProbablePrime(item)).Select(static item => (BigInt) item).ToList();
-    List<BigInt> pValues = [];
-    List<int[]> relations = [];
-    foreach ((BigInt p, BigInt q) in SqrtContinuedFraction.ConvergentsOfSqrt(n, int.MaxValue))
-    {
-      BigInt d = BigInt.Abs(p * p - n * q * q);
-      int[] relation = Enumerable.Repeat(0, primes.Count).ToArray();
-      for (int primesIndex = 0; primesIndex < primes.Count; ++primesIndex)
-      {
-        BigInteger prime = primes[primesIndex];
-        BigInt newDCandidate = BigInt.DivRem(d, prime, out BigInt remainder);
-        while (remainder == 0)
-        {
-          relation[primesIndex]++;
-          d = newDCandidate;
-          newDCandidate = BigInt.DivRem(d, prime, out remainder);
-        }
-      }
-      if (d == 1)
-      {
-        pValues.Add(p % n);
-        relations.Add(relation);
-      }
-      if (primes.Count / 2 < relations.Count)
-      {
-        break;
-      }
-    }
-    BigInt y = BigInt.FindSquareRootFromRelations(relations, primes, n, out List<int> usedIndices);
-    if (1 < y)
-    {
-      BigInt x = usedIndices.Aggregate<int, BigInt>(1, (current, t) => current.MulMod(pValues[t], n));
-      BigInt xSquared = x.PowerMod(2, n);
-      BigInt ySquared = y.PowerMod(2, n);
-      BigInt gcd = BigInt.GreatestCommonDivisor(x + y, n);
-      Console.WriteLine($"x: {x}\ny: {y}\nx^2: {xSquared}\ny^2: {ySquared}\np1: {p1}\np2: {p2}\ngcd: {gcd}");
-    }
-  }
+  private static readonly List<Tests> Tests = [Factorization.Tests.ContinuedFractionFactorization];
 
   private static void Main()
   {
     Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-    if (PerformFactorizations)
+    Random random = new(); // new(4711);
+    TestResults? testResults = PerformTests ? [] : null;
+    const int maxDigitsCount = MinDigitsCount + DigitsPasses - 1;
+    for (int digitsCount = MinDigitsCount; digitsCount <= maxDigitsCount; ++digitsCount)
     {
-      Random random = new();
-      TestResults? testResults = PerformTests ? [] : null;
-      const int maxDigitsCount = MinDigitsCount + DigitsPasses - 1;
-      for (int digitsCount = MinDigitsCount; digitsCount <= maxDigitsCount; ++digitsCount)
+      for (int i = 0; i < NrOfTestPasses; ++i)
       {
-        for (int i = 0; i < NrOfTestPasses; ++i)
-        {
-          Console.WriteLine($"========= Pass {i}");
-          BigInt n = BigInt.GenerateSemiPrime(digitsCount, out BigInt p, out BigInt q, random.Next());
-          Console.WriteLine($"n: {n}");
-          List<(BigInt prime, int exponent)> pM1Factors = BigInt.Factorize(p - 1);
-          List<(BigInt prime, int exponent)> qM1Factors = BigInt.Factorize(q - 1);
-          Console.WriteLine($"p-1: {string.Join(", ", pM1Factors.Select(factor => factor.prime))}");
-          Console.WriteLine($"q-1: {string.Join(", ", qM1Factors.Select(factor => factor.prime))}");
-          PerformPQTests(digitsCount, p, q, ref testResults);
-        }
-      }
-      if (PerformTests && testResults != null)
-      {
-        foreach (Tests test in Tests)
-        {
-          TestEntry[] testEntries = testResults.Where(item => item.test == test).ToArray();
-          List<string> lines = [];
-          for (int j = MinDigitsCount; j <= maxDigitsCount; ++j)
-          {
-            TestEntry[] digitsEntries = testEntries.Where(item => item.digitsCount == j).ToArray();
-            BigInteger[] numbers = digitsEntries.Select(item => (BigInteger) item.n).ToArray();
-            long[] ticks = digitsEntries.Select(item => item.ticks).ToArray();
-            BigInteger medianNumber = numbers.Median();
-            long medianTick = ticks.Median();
-            lines.Add($"{medianNumber};{((double) medianTick / Stopwatch.Frequency).ToPlain()}");
-          }
-          File.WriteAllLines(@"C:\Usr\" + test + ".txt", lines);
-        }
+        Console.WriteLine($"========= Pass {i}");
+        BigInt n = BigInt.GenerateSemiPrime(digitsCount, out BigInt p, out BigInt q, random.Next());
+        Console.WriteLine($"n: {n}");
+        List<(BigInt prime, int exponent)> pM1Factors = BigInt.Factorize(p - 1);
+        List<(BigInt prime, int exponent)> qM1Factors = BigInt.Factorize(q - 1);
+        Console.WriteLine($"p-1: {string.Join(", ", pM1Factors.Select(factor => factor.prime))}");
+        Console.WriteLine($"q-1: {string.Join(", ", qM1Factors.Select(factor => factor.prime))}");
+        PerformPQTests(digitsCount, p, q, ref testResults);
       }
     }
-    else
+    if (PerformTests && testResults != null)
     {
-      FactorBaseExperiments();
+      foreach (Tests test in Tests)
+      {
+        TestEntry[] testEntries = testResults.Where(item => item.test == test).ToArray();
+        List<string> lines = [];
+        for (int j = MinDigitsCount; j <= maxDigitsCount; ++j)
+        {
+          TestEntry[] digitsEntries = testEntries.Where(item => item.digitsCount == j).ToArray();
+          BigInteger[] numbers = digitsEntries.Select(item => (BigInteger) item.n).ToArray();
+          long[] ticks = digitsEntries.Select(item => item.ticks).ToArray();
+          BigInteger medianNumber = numbers.Median();
+          long medianTick = ticks.Median();
+          lines.Add($"{medianNumber};{((double) medianTick / Stopwatch.Frequency).ToPlain()}");
+        }
+        File.WriteAllLines(@"C:\Usr\" + test + ".txt", lines);
+      }
     }
   }
 
@@ -139,7 +86,7 @@ internal class Program
         Console.WriteLine($"{result} x {n / result}");
         Console.WriteLine($"Iterations: {iterations}");
         Console.WriteLine($"Duration: {Math.Round((double) ticks / Stopwatch.Frequency, 3)} s");
-        testResults?.Add(new TestEntry(digitsCount, n, test, iterations, ticks));
+        testResults?.Add(new TestEntry(digitsCount, n, test, ticks));
       }
     }
   }
@@ -151,6 +98,7 @@ internal class Program
     return test switch
     {
       Factorization.Tests.CFRAC => CFRAC.Factorize(n),
+      Factorization.Tests.ContinuedFractionFactorization => ContinuedFractionFactorization.Factorize(n),
       Factorization.Tests.PollardPm1PowerMod => n.PollardPm1PowMod(out iterations),
       Factorization.Tests.PollardPm1Reference => n.PollardPm1Reference(),
       Factorization.Tests.PollardPm1Rho => n.PollardPm1Rho(out iterations),
@@ -168,8 +116,6 @@ internal class Program
       _ => 1
     };
   }
-
-  private static bool PerformFactorizations => false;
 
   private static bool PerformTests => false;
 }

@@ -31,8 +31,8 @@ internal static class SqrtContinuedFraction
     int i = 0;
     foreach (BigInt a in ContinuedFractionSqrt(n))
     {
-      BigInt p = a * p1 + p0;
-      BigInt q = a * q1 + q0;
+      BigInt p = (a * p1 + p0) % n;
+      BigInt q = (a * q1 + q0) % n;
       yield return (p, q);
       p0 = p1;
       p1 = p;
